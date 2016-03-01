@@ -8,11 +8,11 @@ Gem::Specification.new do |spec|
   spec.description = spec.summary
   spec.homepage = 'https://github.com/flant/thepackager'
 
-  spec.authors = []
+  spec.authors = ['']
   spec.email = ''
   spec.license = ''
 
-  spec.files = Dir['lib/**/*']
+  spec.files = Dir['lib/**/*', 'README*', 'LICENSE*']
   spec.executables = ['thepackager']
 
   spec.add_dependency 'thor', '>= 0.19.1', '< 1.0'
