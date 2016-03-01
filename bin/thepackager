@@ -1,0 +1,95 @@
+#!/usr/bin/env ruby
+# vi: set ft=ruby :
+# vi: set sts=2 ts=2 sw=2 :
+
+require 'thor'
+require 'yaml'
+require 'net_status'
+
+module Thepackager
+  module Builder
+    class Base
+      attr_reader :context
+
+      def initialize(context)
+        @context = context
+      end
+
+      def prepare
+      end
+
+      def build
+      end
+    end
+
+    class Fpm < Base
+      def prepare
+      end
+    end
+  end # Builder
+
+  class Error < NetStatus::Exception
+  end # Error
+
+  class Context
+    def packagefile
+      @packagefile ||= begin
+        YAML.load File.open(ENV['PACKAGEFILE'] || 'Packagefile', 'r').read
+      end
+    end
+
+    def builder
+      build_type = packagefile['build_type']
+      begin
+        builder = Builder.const_get(build_type.split('_').map(&:capitalize).join)
+      rescue
+				raise Error, error: :input_error, message: "unknown build type '#{build_type}'"
+      end
+      builder.new(self)
+    end
+  end # Context
+
+  class Cli < Thor
+    desc "init", "Initialize packager base settings"
+    def init
+      raise Error, message: ".travis.yml configuration exists" if File.exists?('.travis.yml')
+
+      travis = {
+        'sudo' => 'required',
+        'dist' => 'trusty',
+        'cache' => 'apt',
+        'before_install' => [
+          'git clone https://github.com/flant/thepackager.git',
+          'cd thepackager',
+          'gem build thepackager.gemspec',
+          'gem install ./thepackager-*.gem',
+        ],
+        'before-script' => [
+          'thepackager prepare',
+        ],
+        'script' => [
+          'thepackager build',
+        ],
+      }
+
+      File.open('.travis.yml', 'w') {|f| f.write YAML.dump(travis)}
+    end
+
+    desc "prepare", "Prepare image or environment for build"
+    def prepare
+      Context.new.builder.prepare
+    end
+
+    desc "build", "Build the package"
+    def build
+      Context.new.builder.build
+    end
+  end # Cli
+end # Thepackager
+
+begin
+  Thepackager::Cli.start
+rescue Thepackager::Error => e
+  $stderr.puts [e.net_status[:error], e.net_status[:message]].compact.join(': ')
+  exit 1
+end

@@ -1,0 +1,35 @@
+GIT
+  remote: https://github.com/flant/net_status.git
+  revision: 5f849b682cec89c5c3a53e97c13137cad49eebed
+  specs:
+    net_status (0.2.4)
+
+PATH
+  remote: .
+  specs:
+    thepackager (0.0.1)
+      thor (>= 0.19.1, < 1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    coderay (1.1.1)
+    method_source (0.8.2)
+    pry (0.10.3)
+      coderay (~> 1.1.0)
+      method_source (~> 0.8.1)
+      slop (~> 3.4)
+    slop (3.6.0)
+    thor (0.19.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bundler (>= 1.1, < 2.0)
+  net_status!
+  pry (>= 0.10.3, < 1.0)
+  thepackager!
+
+BUNDLED WITH
+   1.11.2

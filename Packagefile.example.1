@@ -1,0 +1,44 @@
+build_type: fpm
+package_name: pam_docker
+
+# package_version: $CI_BUILD_TAG || $TRAVIS_TAG || упасть
+
+build_deps: git build-essential
+
+before_prepare:
+    - curl http://flant.ru/key.gpg | apt-key -
+
+after_prepare:
+    - curl http://flant.ru/key.gpg | apt-key -
+
+fpm_script:
+  - when: after_remove
+    what:
+      - rm /usr/share/pam-configs/docker
+  - when: after_install, after_upgrade, after_remove
+    what:
+      - pam-auth-update --package # <cmd>
+
+fpm_config_files:
+    config/security.conf: /etc/security/docker.conf
+
+fpm_files:
+    config/docker: /usr/share/pam-configs/docker
+    pam_docker.so: /lib/security/pam_docker.so \
+
+os:
+    ubuntu:
+         build_deps: libpam0g-dev
+    centos:
+         build_deps: libpam0g-devel
+
+#after_patch:
+#    - rm debian/patches/lalala.patch
+
+before_build:
+    - make
+    - mkdir -p $(pwd)/build
+    - PREFIX=$(pwd)/build make install
+
+targets:
+  ubuntu-14.04-pam_docker: true
