@@ -30,6 +30,3 @@ DEPENDENCIES
   net_status!
   pry (>= 0.10.3, < 1.0)
   thepackager!
-
-BUNDLED WITH
-   1.11.2

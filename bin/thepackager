@@ -59,16 +59,16 @@ module Thepackager
         'dist' => 'trusty',
         'cache' => 'apt',
         'before_install' => [
-          'git clone https://github.com/flant/thepackager.git',
-          'cd thepackager',
-          'gem build thepackager.gemspec',
-          'gem install ./thepackager-*.gem',
+          'git clone https://github.com/flant/thepackager.git /opt/thepackager',
+          'cd /thepackager',
+          'gem install bundler',
+          'bundle install',
         ],
         'before-script' => [
-          'thepackager prepare',
+          'BUNDLE_GEMFILE=/opt/thepackager/Gemfile thepackager prepare',
         ],
         'script' => [
-          'thepackager build',
+          'BUNDLE_GEMFILE=/opt/thepackager/Gemfile thepackager build',
         ],
       }
 
