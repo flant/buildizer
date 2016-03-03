@@ -16,15 +16,15 @@ module Thepackager
       end
 
       def prepare
+        puts "#{self.class}::prepare"
       end
 
       def build
+        puts "#{self.class}::build"
       end
     end
 
     class Fpm < Base
-      def prepare
-      end
     end
   end # Builder
 
@@ -55,21 +55,13 @@ module Thepackager
       raise Error, message: ".travis.yml configuration exists" if File.exists?('.travis.yml')
 
       travis = {
-        'sudo' => 'required',
         'dist' => 'trusty',
         'cache' => 'apt',
-        'before_install' => [
-          'git clone https://github.com/flant/thepackager.git /opt/thepackager',
-          'cd /thepackager',
-          'gem install bundler',
-          'bundle install',
-        ],
-        'before-script' => [
-          'BUNDLE_GEMFILE=/opt/thepackager/Gemfile thepackager prepare',
-        ],
-        'script' => [
-          'BUNDLE_GEMFILE=/opt/thepackager/Gemfile thepackager build',
-        ],
+        'language' => 'ruby',
+        'rvm' => '2.2.1',
+        'before_install' => 'gem install thepackager',
+        'before-script' => 'thepackager prepare',
+        'script' => 'thepackager build',
       }
 
       File.open('.travis.yml', 'w') {|f| f.write YAML.dump(travis)}
