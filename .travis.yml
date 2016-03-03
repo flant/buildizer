@@ -1,0 +1,10 @@
+language: ruby
+rvm: 2.2.1
+deploy:
+  provider: rubygems
+  api_key:
+    secure: YfYvM1b2Fswr4/b09QtZZOdQXQ6Bnnw2NWqiXEhBcZyn6jq7bbRvbyKT8i4sjFs5MvbuIVm1T+bYvgs5SPfo0MwNdNjt5cxMlLmOuW9MBX9eZcVXqGomgi48CX+BEEUq7F+7naooHdDigGxdxEXAOlGmSoh3w+dSB8w4+yIyfXBk6w4IIHaQWk1MhYlalOyxEQzMuM4bzDXPTghb60yVgIT9ChLClMddqn3WXT1H1mx7xQpXs7Sxme8Q7PXDE8YBh5FnacB0nPsijGMYBo7nGTNAhOT9D2EVpgbtLsG+L5L6avuiVXSeI6+K2pp4hTyBOPjGnXGTjEuFOE5Nx4ozy8dxi+0by0fXzj6BXE9kL9iReiLAEdoHn+/JZ/6aGA78K+5SmXlxZAoPmFTDYlwmMZNHyHlJ6XUdUPN2Cd2GquaU/Af7VgN0PgoNutiVBI86wsITK1uUszsxDmPz5FxyOPrAOJC6zFrVhcE3/Dw/mebwgxUgXJwisd1NeC3q0u4FyaQyeka3h1XGnmfx/sMlxs6bMaZHvunubYsFuqMtAaqVTzvA6uHX8/dHap1l13W8B3NbP8tZh4Ch7366APEwZF9OjVeKSsRG5W1Oiw9X0dSGX4NGxMGAPNsxeP+2QbJydeZ5LA7p1BnRsj1vQkE1+y0eE9QezJO6NF2fwuebXNk=
+  gem: thepackager
+  on:
+    tags: true
+    repo: flant/thepackager
