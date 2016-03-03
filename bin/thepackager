@@ -5,37 +5,205 @@
 require 'thor'
 require 'yaml'
 require 'net_status'
+require 'pathname'
+require 'mixlib/shellout'
+require 'net_status'
+require 'pry'
 
 module Thepackager
-  module Builder
-    class Base
-      attr_reader :context
-
-      def initialize(context)
-        @context = context
+  module Refine
+    refine String do
+      def underscore
+        self.gsub(/(.)([A-Z])/,'\1_\2').downcase
       end
+    end
+  end # Refine
 
-      def prepare
-        puts "#{self.class}::prepare"
-      end
+  using Refine
 
-      def build
-        puts "#{self.class}::build"
+  module Concern
+    def self.included(base)
+      base.send(:extend, ClassMethods)
+    end
+
+    def command(*command_args, do_raise: nil)
+      Mixlib::ShellOut.new(*command_args).tap do |cmd|
+        cmd.live_stdout = $stdout
+        cmd.run_command
+        if cmd.status.success?
+          puts [cmd.stdout, cmd.stderr].join("\n")
+        elsif do_raise
+          raise Error.new(error: :error, message: [cmd.stdout, cmd.stderr].join("\n"))
+        end
       end
     end
 
-    class Fpm < Base
+    def command!(*command_args)
+      command(*command_args, do_raise: true)
     end
-  end # Builder
+
+    module ClassMethods
+      def cannonical_name
+        self.name.split('::').last.underscore
+      end
+    end # ClassMethods
+  end # Concern
 
   class Error < NetStatus::Exception
   end # Error
 
-  class Context
-    def packagefile
-      @packagefile ||= begin
-        YAML.load File.open(ENV['PACKAGEFILE'] || 'Packagefile', 'r').read
+  module Builder
+    module Dockerfile
+      class Base
+        include Concern
+
+        attr_reader :instructions
+
+        def initialize
+          @instructions = []
+
+          instruction :FROM, 'ubuntu:14.04'
+          instruction :MAINTAINER, 'flant <256@flant.com>'
+          instruction :RUN, 'apt-get update'
+        end
+
+        def os
+          self.class.os
+        end
+
+        def instruction(instruction, cmd)
+          instructions << [instruction.to_s.upcase, cmd].join(' ')
+        end
+
+        def build_deps(build_deps)
+          raise
+        end
+
+        class << self
+          def os
+            cannonical_name
+          end
+        end # << self
+      end # Base
+
+      class Ubuntu < Base
+        def build_deps(build_deps)
+          instruction :RUN, "apt-get install #{build_deps.to_a.join(' ')}"
+        end
+      end # Ubuntu
+
+      class Centos < Base
+      end # Centos
+    end # Dockerfile
+
+    class Docker
+      include Concern
+
+      attr_reader :builder
+
+      def initialize(builder)
+        @builder = builder
       end
+
+      def new_dockerfile(os)
+        klass = Dockerfile.const_get(os.to_s.split('_').map(&:capitalize).join) rescue nil
+        raise Error, message: "unknown os '#{os}'" unless klass
+        klass.new
+      end
+
+      def build_image(dockerfile)
+        binding.pry
+        os_build_path = builder.build_path.join(dockerfile.os)
+        os_build_path.mkdir rescue nil
+        os_build_path.join('Dockerfile').write [*dockerfile.instructions, "\n"].join("\n")
+        command! "docker build -t thepackager/#{dockerfile.os}/#{builder.build_type} #{os_build_path}"
+      end
+    end # Docker
+
+    class Base
+      include Concern
+
+      attr_reader :packager
+      attr_reader :build_path
+      attr_reader :docker
+
+      def initialize(packager)
+        @packager = packager
+
+        @build_path = Pathname.new(ENV['PREFIX'] || 'build')
+        raise Error, message: "bad build prefix: '#{build_path}' is a file" if build_path.file?
+        build_path.mkdir rescue nil
+
+        @docker = Docker.new(self)
+      end
+
+      def build_type
+        self.class.build_type
+      end
+
+      def before_prepare
+      end
+
+      def after_prepare
+      end
+
+      def build_deps
+      end
+
+      def prepare
+        common_image_params = {}
+        common_image_params[:before_prepare] = Array(packager.packagefile['before_prepare'])
+        common_image_params[:after_prepare] = Array(packager.packagefile['after_prepare'])
+        common_image_params[:build_deps] = Array(packager.packagefile['build_deps']).to_set
+        images = packager.packagefile['os'].to_h.map do |os, params|
+          os_params = common_image_params.dup
+          os_params[:build_deps] |= Array(params['build_deps']).to_set
+          os_params[:before_prepare] += Array(params['before_prepare'])
+          os_params[:after_prepare] += Array(params['after_prepare'])
+          [os, os_params]
+        end.to_h
+        images.each {|os, params| prepare_image(os, params)}
+      end
+
+      def prepare_image(os, before_prepare: [], after_prepare: [], build_deps: [])
+        dockerfile = docker.new_dockerfile(os)
+
+        (Array(self.before_prepare) + before_prepare).each {|cmd| dockerfile.instruction(:RUN, cmd)}
+
+        dockerfile.build_deps(Array(self.build_deps).to_set + build_deps)
+
+        (after_prepare + Array(self.after_prepare)).each {|cmd| dockerfile.instruction(:RUN, cmd)}
+
+        docker.build_image(dockerfile)
+      end
+
+      def build
+        raise "#{self.class}::build"
+      end
+
+      class << self
+        def build_type
+          cannonical_name
+        end
+      end # << self
+    end # Base
+
+    class Fpm < Base
+      def before_prepare
+        'gem install fpm'
+      end
+    end # Fpm
+  end # Builder
+
+  class Packager
+    attr_reader :packagefile_path
+
+    def initialize
+      @packagefile_path = Pathname.new(ENV['PACKAGEFILE'] || 'Packagefile')
+    end
+
+    def packagefile
+      @packagefile ||= YAML.load(@packagefile_path.read)
     end
 
     def builder
@@ -47,7 +215,7 @@ module Thepackager
       end
       builder.new(self)
     end
-  end # Context
+  end # Packager
 
   class Cli < Thor
     desc "init", "Initialize packager base settings"
@@ -69,12 +237,12 @@ module Thepackager
 
     desc "prepare", "Prepare image or environment for build"
     def prepare
-      Context.new.builder.prepare
+      Packager.new.builder.prepare
     end
 
     desc "build", "Build the package"
     def build
-      Context.new.builder.build
+      Packager.new.builder.build
     end
   end # Cli
 end # Thepackager
