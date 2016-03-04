@@ -62,13 +62,10 @@ module Thepackager
         def initialize
           @instructions = []
 
-          instruction :FROM, 'ubuntu:14.04'
+          instruction :FROM, self.class.image
           instruction :MAINTAINER, 'flant <256@flant.com>'
-          instruction :RUN, 'apt-get update'
-        end
-
-        def os
-          self.class.os
+          instruction :ENTRYPOINT, '["/bin/bash", "--login", "-c"]'
+          instruction :CMD, '["/bin/bash"]'
         end
 
         def instruction(instruction, cmd)
@@ -80,6 +77,10 @@ module Thepackager
         end
 
         class << self
+          def image
+            raise
+          end
+
           def os
             cannonical_name
           end
@@ -87,9 +88,26 @@ module Thepackager
       end # Base
 
       class Ubuntu < Base
-        def build_deps(build_deps)
-          instruction :RUN, "apt-get install #{build_deps.to_a.join(' ')}"
+        def initialize
+          super
+
+          init = %q{\
+sed -i s/mesg/#mesg/ /root/.profile; \
+sed -i -r 's/# *(\".*history-search)/\1/' /etc/inputrc; \
+echo export DEBIAN_FRONTEND=noninteractive >> /etc/bash.bashrc; \
+apt-get update -q}
+          instruction :RUN, "bash -lec \"#{init}\""
         end
+
+        def build_deps(build_deps)
+          instruction :RUN, "apt-get install -y #{build_deps.to_a.join(' ')}"
+        end
+
+        class << self
+          def image
+            'ubuntu:14.04'
+          end
+        end # << self
       end # Ubuntu
 
       class Centos < Base
@@ -112,11 +130,10 @@ module Thepackager
       end
 
       def build_image(dockerfile)
-        binding.pry
-        os_build_path = builder.build_path.join(dockerfile.os)
+        os_build_path = builder.build_path.join(dockerfile.class.os)
         os_build_path.mkdir rescue nil
-        os_build_path.join('Dockerfile').write [*dockerfile.instructions, "\n"].join("\n")
-        command! "docker build -t thepackager/#{dockerfile.os}/#{builder.build_type} #{os_build_path}"
+        os_build_path.join('Dockerfile').write [*dockerfile.instructions, nil].join("\n")
+        command! "docker build -t thepackager/#{dockerfile.class.os}/#{builder.class.build_type} #{os_build_path}"
       end
     end # Docker
 
@@ -135,10 +152,6 @@ module Thepackager
         build_path.mkdir rescue nil
 
         @docker = Docker.new(self)
-      end
-
-      def build_type
-        self.class.build_type
       end
 
       def before_prepare
@@ -168,7 +181,9 @@ module Thepackager
       def prepare_image(os, before_prepare: [], after_prepare: [], build_deps: [])
         dockerfile = docker.new_dockerfile(os)
 
-        (Array(self.before_prepare) + before_prepare).each {|cmd| dockerfile.instruction(:RUN, cmd)}
+        (Array(self.before_prepare) + before_prepare).each do |cmd|
+          dockerfile.instruction(:RUN, "bash -lec \"#{cmd}\"")
+        end
 
         dockerfile.build_deps(Array(self.build_deps).to_set + build_deps)
 
@@ -190,7 +205,14 @@ module Thepackager
 
     class Fpm < Base
       def before_prepare
-        'gem install fpm'
+        [%Q{\
+apt-get install -y curl; \
+curl -sSL https://rvm.io/mpapis.asc | gpg --import -; \
+curl -sSL https://get.rvm.io | sudo bash -s stable},
+         %Q{\
+rvm install 2.2.1 --quiet-curl; \
+gem install fpm},
+        ]
       end
     end # Fpm
   end # Builder
