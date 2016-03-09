@@ -23,7 +23,7 @@ module Thepackager
 
   module Concern
     def self.included(base)
-      base.send(:extend, ClassMethods)
+      base.send(:extend, ClassMethods) if defined? ClassMethods
     end
 
     def command(*command_args, do_raise: nil)
@@ -41,102 +41,198 @@ module Thepackager
     def command!(*command_args)
       command(*command_args, do_raise: true)
     end
-
-    module ClassMethods
-      def cannonical_name
-        self.name.split('::').last.underscore
-      end
-    end # ClassMethods
   end # Concern
 
   class Error < NetStatus::Exception
   end # Error
 
-  module Builder
-    module Dockerfile
-      class Base
-        include Concern
+  module Image
+    class Base
+      include Concern
 
-        attr_reader :instructions
+      attr_reader :instructions
+      attr_reader :docker
+      attr_reader :package_name
+      attr_reader :package_version
 
-        def initialize
-          @instructions = []
+      def initialize(docker, package_name:, package_version:)
+        @instructions = []
 
-          instruction :FROM, self.class.image
-          instruction :MAINTAINER, 'flant <256@flant.com>'
-          instruction :ENTRYPOINT, '["/bin/bash", "--login", "-c"]'
-          instruction :CMD, '["/bin/bash"]'
-        end
+        @docker = docker
+        @package_name = package_name
+        @package_version = package_version
 
-        def instruction(instruction, cmd)
-          instructions << [instruction.to_s.upcase, cmd].join(' ')
-        end
+        instruction :FROM, base_image
+        instruction :MAINTAINER, 'flant <256@flant.com>'
+        instruction :ENTRYPOINT, '["/bin/bash", "--login", "-c"]'
+        instruction :CMD, '["/bin/bash"]'
+      end
 
-        def build_deps(build_deps)
-          raise
-        end
+      def os_name
+        raise
+      end
 
-        class << self
-          def image
-            raise
-          end
+      def os_version
+        raise
+      end
 
-          def os
-            cannonical_name
-          end
-        end # << self
-      end # Base
+      def build_dep(build_dep)
+        raise
+      end
 
-      class Ubuntu < Base
-        def initialize
-          super
+      def install_ruby_instructions(&blk)
+        [%Q{\
+curl -sSL https://rvm.io/mpapis.asc | gpg --import -; \
+curl -sSL https://get.rvm.io | bash -s stable},
+         %Q{rvm install 2.2.1 --quiet-curl}]
+      end
 
-          init = %q{\
+      def install_fpm_instructions
+        'gem install fpm'
+      end
+
+      def base_image
+        "#{os_name}:#{os_version}"
+      end
+
+      def name
+        [['thepackager', os_name, docker.builder.build_type, package_name].join('/'),
+         os_version].join(':')
+      end
+
+      def instruction(instruction, cmd)
+        instructions << [instruction.to_s.upcase, cmd].join(' ')
+      end
+    end # Base
+
+    class Ubuntu < Base
+      attr_reader :os_version
+
+      def initialize(docker, os_version, **kwargs)
+        @os_version = os_version
+
+        super(docker, **kwargs)
+
+        init = %q{\
 sed -i s/mesg/#mesg/ /root/.profile; \
 sed -i -r 's/# *(\".*history-search)/\1/' /etc/inputrc; \
 echo export DEBIAN_FRONTEND=noninteractive >> /etc/bash.bashrc; \
-apt-get update -q}
-          instruction :RUN, "bash -lec \"#{init}\""
+apt-get update -q; \
+apt-get install -y curl}
+        instruction :RUN, "bash -lec \"#{init}\""
+      end
+
+      def os_name
+        'ubuntu'
+      end
+
+      def build_dep(build_dep)
+        instruction :RUN, "apt-get build-dep -y #{build_dep.to_a.join(' ')}"
+      end
+    end # Ubuntu
+
+    class Ubuntu1204 < Ubuntu
+      def initialize(docker, **kwargs)
+        super(docker, '12.04', **kwargs)
+      end
+    end # Ubuntu1204
+
+    class Ubuntu1404 < Ubuntu
+      def initialize(docker, **kwargs)
+        super(docker, '14.04', **kwargs)
+      end
+    end # Ubuntu1404
+
+    class Centos < Base
+      attr_reader :os_version
+
+      def initialize(docker, os_version, **kwargs)
+        @os_version = os_version
+
+        super(docker, **kwargs)
+
+        instruction :RUN, "yum install -y which yum-utils"
+      end
+
+      def os_name
+        'centos'
+      end
+
+      def build_dep(build_dep)
+        instruction :RUN, "yum-builddep -y #{build_dep.to_a.join(' ')}"
+      end
+
+      def add_repo(id:, name:, baseurl: nil, enabled: 1, gpgcheck: nil, gpgkey: nil, exclude: nil, includepkgs: nil, mirrorlist: nil)
+        repo = "[#{id}]\
+\\nname=#{name}\
+\\nenabled=#{enabled}\
+#{baseurl ? "\\nbaseurl=#{baseurl}" : nil}\
+#{mirrorlist ? "\\nmirrorlist=#{mirrorlist}" : nil}\
+#{gpgcheck ? "\\ngpgcheck=#{gpgcheck}" : nil}\
+#{gpgkey ? "\\ngpgkey=#{gpgkey}" : nil}\
+#{exclude ? "\\nexclude=#{exclude}" : nil}\
+#{includepkgs ? "\\nincludepkgs=#{includepkgs}" : nil}"
+
+        instruction :RUN, "bash -lec \"echo -e '#{repo}' >> /etc/yum.repos.d/CentOS-Extra-Thepackager.repo\""
+      end
+    end # Centos
+
+    class Centos6 < Centos
+      def initialize(docker, **kwargs)
+        super(docker, 'centos6', **kwargs)
+
+        [:base, :updates, :extras, :centosplus].each do |id|
+          add_repo id: "#{id}-source",
+                   name: "CentOS-\\$releasever - #{id.capitalize} Sources",
+                   baseurl: 'http://vault.centos.org/centos/\$releasever/os/Source/',
+                   gpgcheck: 1,
+                   gpgkey: 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-\$releasever'
         end
-
-        def build_deps(build_deps)
-          instruction :RUN, "apt-get install -y #{build_deps.to_a.join(' ')}"
-        end
-
-        class << self
-          def image
-            'ubuntu:14.04'
-          end
-        end # << self
-      end # Ubuntu
-
-      class Centos < Base
-      end # Centos
-    end # Dockerfile
-
-    class Docker
-      include Concern
-
-      attr_reader :builder
-
-      def initialize(builder)
-        @builder = builder
       end
+    end # Centos6
 
-      def new_dockerfile(os)
-        klass = Dockerfile.const_get(os.to_s.split('_').map(&:capitalize).join) rescue nil
-        raise Error, message: "unknown os '#{os}'" unless klass
-        klass.new
+    class Centos7 < Centos
+      def initialize(docker, **kwargs)
+        super(docker, 'centos7', **kwargs)
       end
+    end # Centos7
+  end # Image
 
-      def build_image(dockerfile)
-        os_build_path = builder.build_path.join(dockerfile.class.os)
-        os_build_path.mkdir rescue nil
-        os_build_path.join('Dockerfile').write [*dockerfile.instructions, nil].join("\n")
-        command! "docker build -t thepackager/#{dockerfile.class.os}/#{builder.class.build_type} #{os_build_path}"
-      end
-    end # Docker
+  class Docker
+    include Concern
 
+    attr_reader :builder
+
+    def initialize(builder)
+      @builder = builder
+    end
+
+    def new_image(os_name, os_version, **kwargs)
+      klass = ({
+        'ubuntu' => {
+          '12.04' => Image::Ubuntu1204,
+          '14.04' => Image::Ubuntu1404,
+          nil => Image::Ubuntu1404,
+        },
+        'centos' => {
+          'centos6' => Image::Centos6,
+          'centos7' => Image::Centos7,
+          nil => Image::Centos7,
+        },
+      }[os_name] || {})[os_version]
+      raise Error, message: "unknown os '#{[os_name, os_version].compact.join('-')}'" unless klass
+      klass.new(self, **kwargs)
+    end
+
+    def build_image(image)
+      build_path = builder.build_path.join(image.os_name).join(image.os_version)
+      build_path.mkpath
+      build_path.join('Dockerfile').write [*image.instructions, nil].join("\n")
+      command! "docker build -t #{image.name} #{build_path}"
+    end
+  end # Docker
+
+  module Builder
     class Base
       include Concern
 
@@ -154,65 +250,140 @@ apt-get update -q}
         @docker = Docker.new(self)
       end
 
-      def before_prepare
+      def build_type
+        raise
       end
 
-      def after_prepare
+      def prepare_image_instructions
       end
 
-      def build_deps
+      def build_dep
+      end
+
+      def base_image_params
+        {}.tap do |params|
+          params[:package_name] = packager.package_name
+          params[:package_version] = packager.package_version
+          params[:prepare] = packager.prepare
+          params[:build_dep] = packager.build_dep
+        end
+      end
+
+      def merge_params(a: nil, b:, &blk)
+        a ||= base_image_params
+
+        {}.tap do |res|
+          yield a, b if block_given?
+          res[:package_name] = a[:package_name] || b['package_name']
+          res[:package_version] = a[:package_version] || b['package_version']
+          res[:prepare] = a[:prepare] + Array(b['prepare'])
+          res[:build_dep] = a[:build_dep] | Array(b['build_dep']).to_set
+        end
+      end
+
+			def merge_os_params(os_name, **kwargs, &blk)
+        merge_params(kwargs.merge( b: packager.os_params(os_name) ), &blk)
+      end
+
+			def merge_os_version_params(os_name, os_version, **kwargs, &blk)
+        merge_params(kwargs.merge( b: packager.os_params([os_name, os_version].join('-')) ), &blk)
+      end
+
+			def merge_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
+        merge_params(kwargs.merge( b: {'package_name' => target_package_name, 'package_version' => target_package_version} ), &blk)
+      end
+
+      def check_params!(params)
+        raise(Error, error: :input_error, message: "package_name is not defined") unless params[:package_name]
+        raise(Error, error: :input_error, message: "package_version is not defined") unless params[:package_version]
       end
 
       def prepare
-        common_image_params = {}
-        common_image_params[:before_prepare] = Array(packager.packagefile['before_prepare'])
-        common_image_params[:after_prepare] = Array(packager.packagefile['after_prepare'])
-        common_image_params[:build_deps] = Array(packager.packagefile['build_deps']).to_set
-        images = packager.packagefile['os'].to_h.map do |os, params|
-          os_params = common_image_params.dup
-          os_params[:build_deps] |= Array(params['build_deps']).to_set
-          os_params[:before_prepare] += Array(params['before_prepare'])
-          os_params[:after_prepare] += Array(params['after_prepare'])
-          [os, os_params]
-        end.to_h
-        images.each {|os, params| prepare_image(os, params)}
+        packager.before_prepare.each {|cmd| command! cmd}
+
+        packager.targets.map {|target|
+          os_name, os_version, target_package_name, target_package_version = target.split('-', 4)
+          params = merge_os_params(os_name)
+          params = merge_os_version_params(os_name, os_version, a: params) if os_version
+          params = merge_target_params(target, target_package_name, target_package_version, a: params) if target_package_name
+
+          check_params! params
+
+          [os_name, os_version, params]
+        }.each {|a| prepare_image(*a)}
+
+        packager.after_prepare.each {|cmd| command! cmd}
       end
 
-      def prepare_image(os, before_prepare: [], after_prepare: [], build_deps: [])
-        dockerfile = docker.new_dockerfile(os)
-
-        (Array(self.before_prepare) + before_prepare).each do |cmd|
-          dockerfile.instruction(:RUN, "bash -lec \"#{cmd}\"")
+      def prepare_image(os_name, os_version, prepare: [], build_dep: [], package_name:, package_version:)
+        image = docker.new_image(os_name, os_version, package_name: package_name, package_version: package_version)
+        (Array(self.prepare_image_instructions(image)) + prepare).each do |cmd|
+          image.instruction(:RUN, "bash -lec \"#{cmd}\"")
         end
-
-        dockerfile.build_deps(Array(self.build_deps).to_set + build_deps)
-
-        (after_prepare + Array(self.after_prepare)).each {|cmd| dockerfile.instruction(:RUN, cmd)}
-
-        docker.build_image(dockerfile)
+        image.build_dep(Array(self.build_dep).to_set + build_dep)
+        docker.build_image(image)
       end
 
       def build
         raise "#{self.class}::build"
       end
-
-      class << self
-        def build_type
-          cannonical_name
-        end
-      end # << self
     end # Base
 
     class Fpm < Base
-      def before_prepare
-        [%Q{\
-apt-get install -y curl; \
-curl -sSL https://rvm.io/mpapis.asc | gpg --import -; \
-curl -sSL https://get.rvm.io | sudo bash -s stable},
-         %Q{\
-rvm install 2.2.1 --quiet-curl; \
-gem install fpm},
-        ]
+      def build_type
+        'fpm'
+      end
+
+      def base_image_params
+        super.tap do |params|
+          raise(Error,
+            error: :input_error,
+            message: [
+              "cannot define package_version in '#{build_type}'",
+              "build type (use TRAVIS_TAG, CI_BUILD_TAG)"
+            ].join(' ')
+          ) if params[:package_version]
+          params[:package_version] = ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
+        end
+      end
+
+      def prepare_image_instructions(image)
+        [*Array(image.install_ruby_instructions),
+         *Array(image.install_fpm_instructions)]
+      end
+
+      def cannot_redefine_package_params!(params, redefine_for: nil)
+        [:package_name, :package_version].each do |param|
+          raise(Error,
+            error: :input_error,
+            message: [
+              "cannot redefine #{param}",
+              redefine_for ? "for #{redefine_for}" : nil,
+              "in '#{build_type}' build_type",
+            ].compact.join(' ')
+          ) if params.key? param.to_s
+        end
+      end
+
+			def merge_os_params(os_name, **kwargs, &blk)
+        super(os_name, **kwargs) do |a, b|
+          cannot_redefine_package_params!(b, redefine_for: "os '#{os_name}'")
+          yield if block_given?
+        end
+      end
+
+			def merge_os_version_params(os_name, os_version, **kwargs, &blk)
+        super(os_name, os_version, **kwargs) do |a, b|
+          cannot_redefine_package_params!(b, redefine_for: "os version '#{os_name}-#{os_version}'")
+          yield if block_given?
+        end
+      end
+
+			def merge_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
+        super(target, target_package_name, target_package_version, **kwargs) do |a, b|
+          cannot_redefine_package_params!(b, redefine_for: "target '#{target}'")
+          yield if block_given?
+        end
       end
     end # Fpm
   end # Builder
@@ -225,22 +396,53 @@ gem install fpm},
     end
 
     def packagefile
-      @packagefile ||= YAML.load(@packagefile_path.read)
+      @packagefile ||= YAML.load(packagefile_path.read)
+    end
+
+    def package_name
+      packagefile['package_name']
+    end
+
+    def package_version
+      packagefile['package_version']
+    end
+
+    def os_params(os)
+      packagefile['os'].to_h[os.to_s].to_h
+    end
+
+    def before_prepare
+      Array(packagefile['before_prepare'])
+    end
+
+    def after_prepare
+      Array(packagefile['after_prepare'])
+    end
+
+    def targets
+      Array(packagefile['target'])
+    end
+
+    def prepare
+      Array(packagefile['prepare'])
+    end
+
+    def build_dep
+      Array(packagefile['build_dep']).to_set
     end
 
     def builder
-      build_type = packagefile['build_type']
-      begin
-        builder = Builder.const_get(build_type.split('_').map(&:capitalize).join)
-      rescue
-				raise Error, error: :input_error, message: "unknown build type '#{build_type}'"
+      @builder ||= begin
+        build_type = packagefile['build_type']
+        klass = {'fpm' => Builder::Fpm}[build_type]
+        raise Error, error: :input_error, message: "unknown build_type '#{build_type}'" unless klass
+        klass.new(self)
       end
-      builder.new(self)
     end
   end # Packager
 
   class Cli < Thor
-    desc "init", "Initialize packager base settings"
+    desc "init", "Initialize base settings"
     def init
       raise Error, message: ".travis.yml configuration exists" if File.exists?('.travis.yml')
 
