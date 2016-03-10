@@ -344,10 +344,13 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build
-        raise "#{self.class}::build"
         docker.login!
-        #TODO
+        puts "#{self.class}::build #TODO"
         docker.logout!
+      end
+
+      def deploy
+        puts "#{self.class}::deploy #TODO"
       end
     end # Base
 
@@ -505,36 +508,43 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       cfg.merge!(
         'dist' => 'trusty',
+        'sudo' => 'required',
         'cache' => 'apt',
         'language' => 'ruby',
         'rvm' => '2.2.1',
         'install' => [
-          'apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
-          'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" > /etc/apt/sources.list.d/docker.list',
-          'apt-get update',
-          'apt-get install -y docker-engine',
-          'git clone https://github.com/flant/thepackager /opt/thepackager',
-          'echo "export BUNDLE_GEMFILE=/opt/thepackager/Gemfile" > /etc/profile.d/thepackager.sh',
-          'chmod +x /etc/profile.d/thepackager.sh',
-          'cd /opt/thepackager',
+          'sudo apt-get update',
+          'sudo apt-get install -y apt-transport-https ca-certificates',
+          'sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
+          'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee /etc/apt/sources.list.d/docker.list',
+          'sudo apt-get update',
+          'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine',
+          'git clone https://github.com/flant/thepackager ~/thepackager',
+          'echo "export BUNDLE_GEMFILE=~/thepackager/Gemfile" | tee -a ~/.bashrc',
+          'export BUNDLE_GEMFILE=~/thepackager/Gemfile',
           'gem install bundler',
           'bundle install',
         ],
-        'script' => [
-          'bash -lec "echo HAHA NOTHING HERE"',
-        ],
+        'before_script' => 'thepackager prepare',
+        'script' => 'thepackager build',
+        'deploy' => 'thepackager deploy',
       )
       File.open('.travis.yml', 'w') {|f| f.write YAML.dump(cfg)}
     end
 
-    desc "prepare", "Prepare image or environment for build"
+    desc "prepare", "Prepare images for building packages"
     def prepare
       Packager.new.builder.prepare
     end
 
-    desc "build", "Build the package"
+    desc "build", "Build packages"
     def build
       Packager.new.builder.build
+    end
+
+    desc "deploy", "Deploy packages"
+    def deploy
+      Packager.new.builder.deploy
     end
   end # Cli
 end # Thepackager
