@@ -30,11 +30,10 @@ module Thepackager
       Mixlib::ShellOut.new(*command_args).tap do |cmd|
         cmd.live_stdout = $stdout
         cmd.run_command
-        if cmd.status.success?
-          puts [cmd.stdout, cmd.stderr].join("\n")
-        elsif do_raise
+        if not cmd.status.success? and do_raise
           raise Error.new(error: :error, message: [cmd.stdout, cmd.stderr].join("\n"))
         end
+        cmd
       end
     end
 
@@ -52,20 +51,19 @@ module Thepackager
 
       attr_reader :instructions
       attr_reader :docker
+      attr_reader :target
       attr_reader :package_name
       attr_reader :package_version
 
-      def initialize(docker, package_name:, package_version:)
+      def initialize(docker, target:, package_name:, package_version:)
         @instructions = []
 
         @docker = docker
+        @target = target
         @package_name = package_name
         @package_version = package_version
 
         instruction :FROM, base_image
-        instruction :MAINTAINER, 'flant <256@flant.com>'
-        instruction :ENTRYPOINT, '["/bin/bash", "--login", "-c"]'
-        instruction :CMD, '["/bin/bash"]'
       end
 
       def os_name
@@ -92,12 +90,11 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def base_image
-        "#{os_name}:#{os_version}"
+        "thepackager/#{os_name}:#{os_version}"
       end
 
       def name
-        [['thepackager', os_name, docker.builder.build_type, package_name].join('/'),
-         os_version].join(':')
+        "#{docker.builder.packager.docker_image || "thepackager/#{package_name}"}:#{target}"
       end
 
       def instruction(instruction, cmd)
@@ -110,16 +107,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       def initialize(docker, os_version, **kwargs)
         @os_version = os_version
-
         super(docker, **kwargs)
-
-        init = %q{\
-sed -i s/mesg/#mesg/ /root/.profile; \
-sed -i -r 's/# *(\".*history-search)/\1/' /etc/inputrc; \
-echo export DEBIAN_FRONTEND=noninteractive >> /etc/bash.bashrc; \
-apt-get update -q; \
-apt-get install -y curl}
-        instruction :RUN, "bash -lec \"#{init}\""
       end
 
       def os_name
@@ -148,10 +136,7 @@ apt-get install -y curl}
 
       def initialize(docker, os_version, **kwargs)
         @os_version = os_version
-
         super(docker, **kwargs)
-
-        instruction :RUN, "yum install -y which yum-utils"
       end
 
       def os_name
@@ -180,14 +165,6 @@ apt-get install -y curl}
     class Centos6 < Centos
       def initialize(docker, **kwargs)
         super(docker, 'centos6', **kwargs)
-
-        [:base, :updates, :extras, :centosplus].each do |id|
-          add_repo id: "#{id}-source",
-                   name: "CentOS-\\$releasever - #{id.capitalize} Sources",
-                   baseurl: 'http://vault.centos.org/centos/\$releasever/os/Source/',
-                   gpgcheck: 1,
-                   gpgkey: 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-\$releasever'
-        end
       end
     end # Centos6
 
@@ -202,9 +179,17 @@ apt-get install -y curl}
     include Concern
 
     attr_reader :builder
+    attr_reader :username
+    attr_reader :password
+    attr_reader :email
+    attr_reader :server
 
-    def initialize(builder)
+    def initialize(builder, username:, password:, email:, server: nil)
       @builder = builder
+      @username = username
+      @password = password
+      @email = email
+      @server = server
     end
 
     def new_image(os_name, os_version, **kwargs)
@@ -224,11 +209,33 @@ apt-get install -y curl}
       klass.new(self, **kwargs)
     end
 
-    def build_image(image)
+    def login!
+      docker_login = ["docker login --email=#{email} --username=#{username} --password=#{password}"]
+      docker_login << "--server=#{server}" if server
+      command! docker_login.join(' ')
+    end
+
+    def logout!
+      command! 'docker logout'
+    end
+
+    def pull_image!(image)
+      command "docker pull #{image.name}"
+    end
+
+    def push_image!(image)
+      command! "docker push #{image.name}"
+    end
+
+    def build_image!(image)
+      pull_image! image
+
       build_path = builder.build_path.join(image.os_name).join(image.os_version)
       build_path.mkpath
       build_path.join('Dockerfile').write [*image.instructions, nil].join("\n")
       command! "docker build -t #{image.name} #{build_path}"
+
+      push_image! image
     end
   end # Docker
 
@@ -247,7 +254,12 @@ apt-get install -y curl}
         raise Error, message: "bad build prefix: '#{build_path}' is a file" if build_path.file?
         build_path.mkdir rescue nil
 
-        @docker = Docker.new(self)
+        @docker = Docker.new(self,
+          username: packager.docker_username,
+          password: packager.docker_password,
+          email: packager.docker_email,
+          server: packager.docker_server,
+        )
       end
 
       def build_type
@@ -299,6 +311,8 @@ apt-get install -y curl}
       end
 
       def prepare
+        docker.login!
+
         packager.before_prepare.each {|cmd| command! cmd}
 
         packager.targets.map {|target|
@@ -306,6 +320,7 @@ apt-get install -y curl}
           params = merge_os_params(os_name)
           params = merge_os_version_params(os_name, os_version, a: params) if os_version
           params = merge_target_params(target, target_package_name, target_package_version, a: params) if target_package_name
+          params[:target] = target
 
           check_params! params
 
@@ -313,19 +328,26 @@ apt-get install -y curl}
         }.each {|a| prepare_image(*a)}
 
         packager.after_prepare.each {|cmd| command! cmd}
+
+        docker.logout!
       end
 
-      def prepare_image(os_name, os_version, prepare: [], build_dep: [], package_name:, package_version:)
-        image = docker.new_image(os_name, os_version, package_name: package_name, package_version: package_version)
+      def prepare_image(os_name, os_version,
+                        prepare: [], build_dep: [],
+                        package_name:, package_version:, target:)
+        image = docker.new_image(os_name, os_version, target: target, package_name: package_name, package_version: package_version)
         (Array(self.prepare_image_instructions(image)) + prepare).each do |cmd|
           image.instruction(:RUN, "bash -lec \"#{cmd}\"")
         end
         image.build_dep(Array(self.build_dep).to_set + build_dep)
-        docker.build_image(image)
+        docker.build_image!(image)
       end
 
       def build
         raise "#{self.class}::build"
+        docker.login!
+        #TODO
+        docker.logout!
       end
     end # Base
 
@@ -340,7 +362,7 @@ apt-get install -y curl}
             error: :input_error,
             message: [
               "cannot define package_version in '#{build_type}'",
-              "build type (use TRAVIS_TAG, CI_BUILD_TAG)"
+              "build type (TRAVIS_TAG, CI_BUILD_TAG env variables)"
             ].join(' ')
           ) if params[:package_version]
           params[:package_version] = ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
@@ -420,7 +442,11 @@ apt-get install -y curl}
     end
 
     def targets
-      Array(packagefile['target'])
+      targets = Array(packagefile['target'])
+      restrict_targets = ENV['THEPACKAGER_TARGET']
+      restrict_targets = restrict_targets.split(',').map(&:strip) if restrict_targets
+      targets = targets & restrict_targets if restrict_targets
+      targets
     end
 
     def prepare
@@ -429,6 +455,32 @@ apt-get install -y curl}
 
     def build_dep
       Array(packagefile['build_dep']).to_set
+    end
+
+    def docker_server
+      packagefile['docker_server']
+    end
+
+    def docker_image
+      packagefile['image']
+    end
+
+    def docker_username
+      ENV['THEPACKAGER_DOCKER_USERNAME'] || begin
+        raise Error, error: :input_error, message: "THEPACKAGER_DOCKER_USERNAME env variable required"
+      end
+    end
+
+    def docker_password
+      ENV['THEPACKAGER_DOCKER_PASSWORD'] || begin
+        raise Error, error: :input_error, message: "THEPACKAGER_DOCKER_PASSWORD env variable required"
+      end
+    end
+
+    def docker_email
+      ENV['THEPACKAGER_DOCKER_EMAIL'] || begin
+        raise Error, error: :input_error, message: "THEPACKAGER_DOCKER_EMAIL env variable required"
+      end
     end
 
     def builder
