@@ -496,19 +496,35 @@ curl -sSL https://get.rvm.io | bash -s stable},
   class Cli < Thor
     desc "init", "Initialize base settings"
     def init
-      raise Error, message: ".travis.yml configuration exists" if File.exists?('.travis.yml')
+      file = Pathname.new('./.travis.yml')
+      begin
+        cfg = file.exist? ? YAML.load(file.read) : {}
+      rescue Psych::Exception => err
+        raise Error, error: :input_error, message: "bad travis config file #{file}: #{err.message}"
+      end
 
-      travis = {
+      cfg.merge!(
         'dist' => 'trusty',
         'cache' => 'apt',
         'language' => 'ruby',
         'rvm' => '2.2.1',
-        'before_install' => 'gem install thepackager',
-        'before-script' => 'thepackager prepare',
-        'script' => 'thepackager build',
-      }
-
-      File.open('.travis.yml', 'w') {|f| f.write YAML.dump(travis)}
+        'install' => [
+          'apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
+          'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" > /etc/apt/sources.list.d/docker.list',
+          'apt-get update',
+          'apt-get install -y docker-engine',
+          'git clone https://github.com/flant/thepackager /opt/thepackager',
+          'echo "export BUNDLE_GEMFILE=/opt/thepackager/Gemfile" > /etc/profile.d/thepackager.sh',
+          'chmod +x /etc/profile.d/thepackager.sh',
+          'cd /opt/thepackager',
+          'gem install bundler',
+          'bundle install',
+        ],
+        'script' => [
+          'bash -lec "echo HAHA NOTHING HERE"',
+        ],
+      )
+      File.open('.travis.yml', 'w') {|f| f.write YAML.dump(cfg)}
     end
 
     desc "prepare", "Prepare image or environment for build"
