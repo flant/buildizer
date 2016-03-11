@@ -419,11 +419,46 @@ curl -sSL https://get.rvm.io | bash -s stable},
     attr_reader :options_path
     attr_reader :travis_path
 
-    def initialize
+    def initialize(options: {})
       @package_path = Pathname.new(ENV['THEPACKAGER_PATH'] || '.')
       @packagefile_path = package_path.join('Packagefile')
       @options_path = package_path.join('.thepackager.yml')
       @travis_path = package_path.join('.travis.yml')
+      @_options = options
+    end
+
+    def initialized?
+      options_path.exist?
+    end
+
+    def init!
+      raise Error, error: :logical_error, message: "already initialized" if initialized?
+
+      git_precommit_init!
+      options_setup!
+      travis_setup!
+    end
+
+    def deinit!
+      raise Error, error: :logical_error, message: "not initialized" unless initialized?
+      options_path.delete
+      git_precommit_deinit!
+    end
+
+    def update!
+      travis_setup!
+    end
+
+    def prepare!
+      builder.prepare
+    end
+
+    def build!
+      builder.build
+    end
+
+    def deploy!
+      builder.deploy # TODO
     end
 
     def packagefile
@@ -431,12 +466,12 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end
 
     def options
-      @options ||= (YAML.load(options_path.read) rescue {})
+      @options ||= (YAML.load(options_path.read) rescue {}).merge(@_options)
     end
 
-    def options!(v)
+    def options_setup!
+      options_path.write YAML.dump(options)
       @options = nil
-      options_path.write YAML.dump(v)
     end
 
     def travis
@@ -445,9 +480,36 @@ curl -sSL https://get.rvm.io | bash -s stable},
       raise Error, error: :input_error, message: "bad travis config file #{file}: #{err.message}"
     end
 
-    def travis!(v)
+    def travis_setup!
+      install = [
+        'sudo apt-get update',
+        'sudo apt-get install -y apt-transport-https ca-certificates',
+        'sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
+        'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee /etc/apt/sources.list.d/docker.list',
+        'sudo apt-get update',
+        'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine=1.9.1-0~trusty', # FIXME [https://github.com/docker/docker/issues/20316]
+        'echo "docker-engine hold" | sudo dpkg --set-selections',
+      ]
+      install.push(*Array(thepackager_install_instructions(latest: options['latest'])))
+
+      env = targets.map {|t| "THEPACKAGER_TARGET=#{t}"}
+
+      travis_path.write YAML.dump(travis.merge(
+        'dist' => 'trusty',
+        'sudo' => 'required',
+        'cache' => ['apt', 'bundler'],
+        'language' => 'ruby',
+        'rvm' => '2.2.1',
+        'install' => install,
+        'before_script' => 'thepackager prepare',
+        'script' => 'thepackager build',
+        'deploy' => {
+          'provider' => 'script',
+          'script' => 'thepackager deploy',
+        },
+        'env' => env,
+      ))
       @travis = nil
-      travis_path.write YAML.dump(v)
     end
 
     def git_hooks_path
@@ -468,13 +530,19 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
     def git_precommit_init!
       if git_precommit_path.exist?
+        raise(Error,
+          error: :logical_error,
+          message: [
+            "unable to backup existing precommit script: ",
+            "file already exists: #{git_old_precommit_path}",
+          ].join) if git_old_precommit_path.exist?
         git_old_hooks_path.mkpath
         FileUtils.cp git_precommit_path, git_old_precommit_path
       end
+
       git_precommit_path.write <<-EOF
 #!/bin/bash
-thepackager init
-git add -v .thepackager.yml
+thepackager update
 git add -v .travis.yml
       EOF
       git_precommit_path.chmod 0755
@@ -577,62 +645,32 @@ git add -v .travis.yml
       type: :boolean,
       desc: "use thepackager github master branch"
     def init
-      packager = Packager.new
-      opts = packager.options.merge(options)
+      Packager.new(options: options).init!
+    end
 
-      install = [
-        'sudo apt-get update',
-        'sudo apt-get install -y apt-transport-https ca-certificates',
-        'sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
-        'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee /etc/apt/sources.list.d/docker.list',
-        'sudo apt-get update',
-        'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine',
-      ]
-      install.push(*Array(packager.thepackager_install_instructions(latest: opts['latest'])))
-
-      env = packager.targets.map {|t| "THEPACKAGER_TARGET=#{t}"}
-
-      packager.travis! packager.travis.merge(
-        'dist' => 'trusty',
-        'sudo' => 'required',
-        'cache' => 'apt',
-        'language' => 'ruby',
-        'rvm' => '2.2.1',
-        'install' => install,
-        'before_script' => 'thepackager prepare',
-        'script' => 'thepackager build',
-        'deploy' => {
-          'provider' => 'script',
-          'script' => 'thepackager deploy',
-        },
-        'env' => env,
-      )
-      packager.git_precommit_init! unless packager.options_path.exist?
-      packager.options! opts
+    desc "update", "Regenerate .travis.yml"
+    def update
+      Packager.new(options: options).update!
     end
 
     desc "deinit", "Deinitialize settings (thepackager config, git pre-commit hook)"
     def deinit
-      packager = Packager.new
-      if packager.options_path.exist?
-        packager.options_path.delete
-        packager.git_precommit_deinit!
-      end
+      Packager.new(options: options).deinit!
     end
 
     desc "prepare", "Prepare images for building packages"
     def prepare
-      Packager.new.builder.prepare
+      Packager.new(options: options).prepare!
     end
 
     desc "build", "Build packages"
     def build
-      Packager.new.builder.build
+      Packager.new(options: options).build!
     end
 
     desc "deploy", "Deploy packages"
     def deploy
-      Packager.new.builder.deploy
+      Packager.new(options: options).deploy!
     end
   end # Cli
 end # Thepackager
