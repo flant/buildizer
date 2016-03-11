@@ -497,7 +497,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       travis_path.write YAML.dump(travis.merge(
         'dist' => 'trusty',
         'sudo' => 'required',
-        'cache' => ['apt', 'bundler'],
+        'cache' => 'apt',
         'language' => 'ruby',
         'rvm' => '2.2.1',
         'install' => install,
