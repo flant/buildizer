@@ -414,14 +414,76 @@ curl -sSL https://get.rvm.io | bash -s stable},
   end # Builder
 
   class Packager
+    attr_reader :package_path
     attr_reader :packagefile_path
+    attr_reader :options_path
+    attr_reader :travis_path
 
     def initialize
-      @packagefile_path = Pathname.new(ENV['PACKAGEFILE'] || 'Packagefile')
+      @package_path = Pathname.new(ENV['THEPACKAGER_PATH'] || '.')
+      @packagefile_path = package_path.join('Packagefile')
+      @options_path = package_path.join('.thepackager.yml')
+      @travis_path = package_path.join('.travis.yml')
     end
 
     def packagefile
       @packagefile ||= YAML.load(packagefile_path.read)
+    end
+
+    def options
+      @options ||= (YAML.load(options_path.read) rescue {})
+    end
+
+    def options!(v)
+      @options = nil
+      options_path.write YAML.dump(v)
+    end
+
+    def travis
+      @travis ||= (travis_path.exist? ? YAML.load(travis_path.read) : {})
+    rescue Psych::Exception => err
+      raise Error, error: :input_error, message: "bad travis config file #{file}: #{err.message}"
+    end
+
+    def travis!(v)
+      @travis = nil
+      travis_path.write YAML.dump(v)
+    end
+
+    def git_hooks_path
+      package_path.join('.git').join('hooks')
+    end
+
+    def git_old_hooks_path
+      git_hooks_path.join('old-hooks')
+    end
+
+    def git_precommit_path
+      git_hooks_path.join('pre-commit')
+    end
+
+    def git_old_precommit_path
+      git_old_hooks_path.join('pre-commit')
+    end
+
+    def git_precommit_init!
+      if git_precommit_path.exist?
+        git_old_hooks_path.mkpath
+        FileUtils.cp git_precommit_path, git_old_precommit_path
+      end
+      git_precommit_path.write <<-EOF
+#!/bin/bash
+thepackager init
+git add -v .thepackager.yml
+git add -v .travis.yml
+      EOF
+      git_precommit_path.chmod 0755
+    end
+
+    def git_precommit_deinit!
+      git_precommit_path.delete if git_precommit_path.exist?
+      FileUtils.cp git_old_precommit_path, git_precommit_path if git_old_precommit_path.exist?
+      git_old_hooks_path.rmtree if git_old_hooks_path.exist?
     end
 
     def package_name
@@ -495,34 +557,28 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
     end
 
-    class << self
-      def thepackager_install_instructions(latest: nil)
-        if latest
-          ['git clone https://github.com/flant/thepackager ~/thepackager',
-           'echo "export BUNDLE_GEMFILE=~/thepackager/Gemfile" | tee -a ~/.bashrc',
-           'export BUNDLE_GEMFILE=~/thepackager/Gemfile',
-           'gem install bundler',
-           'bundle install',
-          ]
-        else
-          'gem install thepackager'
-        end
+    def thepackager_install_instructions(latest: nil)
+      if latest
+        ['git clone https://github.com/flant/thepackager ~/thepackager',
+         'echo "export BUNDLE_GEMFILE=~/thepackager/Gemfile" | tee -a ~/.bashrc',
+         'export BUNDLE_GEMFILE=~/thepackager/Gemfile',
+         'gem install bundler',
+         'bundle install',
+        ]
+      else
+        'gem install thepackager'
       end
-    end # << self
+    end
   end # Packager
 
   class Cli < Thor
-    desc "init", "Initialize base settings"
+    desc "init", "Initialize settings (travis config, thepackager config, git pre-commit hook)"
     method_option :latest,
       type: :boolean,
       desc: "use thepackager github master branch"
     def init
-      file = Pathname.new('./.travis.yml')
-      begin
-        cfg = file.exist? ? YAML.load(file.read) : {}
-      rescue Psych::Exception => err
-        raise Error, error: :input_error, message: "bad travis config file #{file}: #{err.message}"
-      end
+      packager = Packager.new
+      opts = packager.options.merge(options)
 
       install = [
         'sudo apt-get update',
@@ -532,9 +588,9 @@ curl -sSL https://get.rvm.io | bash -s stable},
         'sudo apt-get update',
         'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine',
       ]
-      install.push(*Array(Packager.thepackager_install_instructions(latest: options[:latest])))
+      install.push(*Array(packager.thepackager_install_instructions(latest: opts['latest'])))
 
-      cfg.merge!(
+      packager.travis! packager.travis.merge(
         'dist' => 'trusty',
         'sudo' => 'required',
         'cache' => 'apt',
@@ -548,8 +604,17 @@ curl -sSL https://get.rvm.io | bash -s stable},
           'script' => 'thepackager deploy',
         },
       )
+      packager.git_precommit_init! unless packager.options_path.exist?
+      packager.options! opts
+    end
 
-      File.open('.travis.yml', 'w') {|f| f.write YAML.dump(cfg)}
+    desc "deinit", "Deinitialize settings (thepackager config, git pre-commit hook)"
+    def deinit
+      packager = Packager.new
+      if packager.options_path.exist?
+        packager.options_path.delete
+        packager.git_precommit_deinit!
+      end
     end
 
     desc "prepare", "Prepare images for building packages"
