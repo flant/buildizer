@@ -494,10 +494,28 @@ curl -sSL https://get.rvm.io | bash -s stable},
         klass.new(self)
       end
     end
+
+    class << self
+      def thepackager_install_instructions(latest: nil)
+        if latest
+          ['git clone https://github.com/flant/thepackager ~/thepackager',
+           'echo "export BUNDLE_GEMFILE=~/thepackager/Gemfile" | tee -a ~/.bashrc',
+           'export BUNDLE_GEMFILE=~/thepackager/Gemfile',
+           'gem install bundler',
+           'bundle install',
+          ]
+        else
+          'gem install thepackager'
+        end
+      end
+    end # << self
   end # Packager
 
   class Cli < Thor
     desc "init", "Initialize base settings"
+    method_option :latest,
+      type: :boolean,
+      desc: "use thepackager github master branch"
     def init
       file = Pathname.new('./.travis.yml')
       begin
@@ -506,29 +524,31 @@ curl -sSL https://get.rvm.io | bash -s stable},
         raise Error, error: :input_error, message: "bad travis config file #{file}: #{err.message}"
       end
 
+      install = [
+        'sudo apt-get update',
+        'sudo apt-get install -y apt-transport-https ca-certificates',
+        'sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
+        'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee /etc/apt/sources.list.d/docker.list',
+        'sudo apt-get update',
+        'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine',
+      ]
+      install.push(*Array(Packager.thepackager_install_instructions(latest: options[:latest])))
+
       cfg.merge!(
         'dist' => 'trusty',
         'sudo' => 'required',
         'cache' => 'apt',
         'language' => 'ruby',
         'rvm' => '2.2.1',
-        'install' => [
-          'sudo apt-get update',
-          'sudo apt-get install -y apt-transport-https ca-certificates',
-          'sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
-          'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee /etc/apt/sources.list.d/docker.list',
-          'sudo apt-get update',
-          'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine',
-          'git clone https://github.com/flant/thepackager ~/thepackager',
-          'echo "export BUNDLE_GEMFILE=~/thepackager/Gemfile" | tee -a ~/.bashrc',
-          'export BUNDLE_GEMFILE=~/thepackager/Gemfile',
-          'gem install bundler',
-          'bundle install',
-        ],
+        'install' => install,
         'before_script' => 'thepackager prepare',
         'script' => 'thepackager build',
-        'deploy' => 'thepackager deploy',
+        'deploy' => {
+          'provider' => 'script',
+          'script' => 'thepackager deploy',
+        },
       )
+
       File.open('.travis.yml', 'w') {|f| f.write YAML.dump(cfg)}
     end
 
