@@ -676,7 +676,7 @@ git add -v .travis.yml
   end # Packager
 
   class Cli < Thor
-    desc "init", "Initialize settings (travis config, thepackager config, git pre-commit hook)"
+    desc "init", "Initialize settings (.travis.yml, .thepackager.yml, git pre-commit hook)"
     method_option :latest,
       type: :boolean,
       desc: "use thepackager github master branch"
@@ -689,7 +689,7 @@ git add -v .travis.yml
       Packager.new(options: options).update!
     end
 
-    desc "deinit", "Deinitialize settings (thepackager config, git pre-commit hook)"
+    desc "deinit", "Deinitialize settings (.thepackager.yml, git pre-commit hook)"
     def deinit
       Packager.new(options: options).deinit!
     end
