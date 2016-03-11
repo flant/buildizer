@@ -45,6 +45,39 @@ module Thepackager
   class Error < NetStatus::Exception
   end # Error
 
+  class Target
+    attr_reader :builder
+    attr_reader :image
+
+    attr_reader :name
+    attr_reader :os_name
+    attr_reader :os_version
+    attr_reader :package_name
+    attr_reader :package_version
+    attr_reader :prepare
+    attr_reader :build_dep
+
+    def initialize(builder,
+                   name:, os_name:, os_version:,
+                   package_name:, package_version:,
+                   prepare: [], build_dep: [])
+      @builder = builder
+      @name = name
+      @os_name = os_name
+      @os_version = os_version
+      @package_name = package_name
+      @package_version = package_version
+      @prepare = prepare
+      @build_dep = build_dep
+
+      @image = builder.docker.new_image(self)
+    end
+
+    def docker_image
+      builder.packager.docker_image || "thepackager/#{package_name}"
+    end
+  end # Target
+
   module Image
     class Base
       include Concern
@@ -52,16 +85,11 @@ module Thepackager
       attr_reader :instructions
       attr_reader :docker
       attr_reader :target
-      attr_reader :package_name
-      attr_reader :package_version
 
-      def initialize(docker, target:, package_name:, package_version:)
+      def initialize(docker, target, **kwargs)
         @instructions = []
-
         @docker = docker
         @target = target
-        @package_name = package_name
-        @package_version = package_version
 
         instruction :FROM, base_image
       end
@@ -94,7 +122,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def name
-        "#{docker.builder.packager.docker_image || "thepackager/#{package_name}"}:#{target}"
+        "#{target.docker_image}:#{target.name}"
       end
 
       def instruction(instruction, cmd)
@@ -105,9 +133,9 @@ curl -sSL https://get.rvm.io | bash -s stable},
     class Ubuntu < Base
       attr_reader :os_version
 
-      def initialize(docker, os_version, **kwargs)
+      def initialize(docker, target, os_version, **kwargs)
         @os_version = os_version
-        super(docker, **kwargs)
+        super(docker, target, **kwargs)
       end
 
       def os_name
@@ -120,23 +148,23 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end # Ubuntu
 
     class Ubuntu1204 < Ubuntu
-      def initialize(docker, **kwargs)
-        super(docker, '12.04', **kwargs)
+      def initialize(docker, target, **kwargs)
+        super(docker, target, '12.04', **kwargs)
       end
     end # Ubuntu1204
 
     class Ubuntu1404 < Ubuntu
-      def initialize(docker, **kwargs)
-        super(docker, '14.04', **kwargs)
+      def initialize(docker, target, **kwargs)
+        super(docker, target, '14.04', **kwargs)
       end
     end # Ubuntu1404
 
     class Centos < Base
       attr_reader :os_version
 
-      def initialize(docker, os_version, **kwargs)
+      def initialize(docker, target, os_version, **kwargs)
         @os_version = os_version
-        super(docker, **kwargs)
+        super(docker, target, **kwargs)
       end
 
       def os_name
@@ -163,14 +191,14 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end # Centos
 
     class Centos6 < Centos
-      def initialize(docker, **kwargs)
-        super(docker, 'centos6', **kwargs)
+      def initialize(docker, target, **kwargs)
+        super(docker, target, 'centos6', **kwargs)
       end
     end # Centos6
 
     class Centos7 < Centos
-      def initialize(docker, **kwargs)
-        super(docker, 'centos7', **kwargs)
+      def initialize(docker, target, **kwargs)
+        super(docker, target, 'centos7', **kwargs)
       end
     end # Centos7
   end # Image
@@ -192,7 +220,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       @server = server
     end
 
-    def new_image(os_name, os_version, **kwargs)
+    def new_image(target, **kwargs)
       klass = ({
         'ubuntu' => {
           '12.04' => Image::Ubuntu1204,
@@ -204,9 +232,13 @@ curl -sSL https://get.rvm.io | bash -s stable},
           'centos7' => Image::Centos7,
           nil => Image::Centos7,
         },
-      }[os_name] || {})[os_version]
-      raise Error, message: "unknown os '#{[os_name, os_version].compact.join('-')}'" unless klass
-      klass.new(self, **kwargs)
+      }[target.os_name] || {})[target.os_version]
+
+      unless klass
+        raise Error, message: "unknown os '#{[target.os_name, target.os_version].compact.join('-')}'"
+      end
+
+      klass.new(self, target, **kwargs)
     end
 
     def login!
@@ -266,10 +298,23 @@ curl -sSL https://get.rvm.io | bash -s stable},
         raise
       end
 
-      def prepare_image_instructions
+      def prepare_image_instructions(image)
       end
 
       def build_dep
+      end
+
+      def targets
+        @targets ||= packager.targets.map {|target|
+          os_name, os_version, target_package_name, target_package_version = target.split('-', 4)
+          params = merge_os_params(os_name)
+          params = merge_os_version_params(os_name, os_version, into: params) if os_version
+          params = merge_target_params(target, target_package_name, target_package_version,
+                                       into: params) if target_package_name
+          check_params! params
+
+          Target.new(self, name: target, os_name: os_name, os_version: os_version, **params)
+        }
       end
 
       def base_image_params
@@ -293,59 +338,50 @@ curl -sSL https://get.rvm.io | bash -s stable},
         end
       end
 
-			def merge_os_params(os_name, **kwargs, &blk)
-        merge_params(kwargs.merge( b: packager.os_params(os_name) ), &blk)
+      def merge_os_params(os_name, into: nil, &blk)
+        merge_params(a: into, b: packager.os_params(os_name), &blk)
       end
 
-			def merge_os_version_params(os_name, os_version, **kwargs, &blk)
-        merge_params(kwargs.merge( b: packager.os_params([os_name, os_version].join('-')) ), &blk)
+      def merge_os_version_params(os_name, os_version, into: nil, &blk)
+        merge_params(a: into, b: packager.os_params([os_name, os_version].join('-')), &blk)
       end
 
-			def merge_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
-        merge_params(kwargs.merge( b: {'package_name' => target_package_name, 'package_version' => target_package_version} ), &blk)
+      def merge_target_params(target, target_package_name, target_package_version, into: nil, &blk)
+        merge_params(a: into,
+                     b: {'package_name' => target_package_name,
+                         'package_version' => target_package_version}, &blk)
       end
 
       def check_params!(params)
-        raise(Error, error: :input_error, message: "package_name is not defined") unless params[:package_name]
-        raise(Error, error: :input_error, message: "package_version is not defined") unless params[:package_version]
+        raise(Error, error: :input_error,
+                     message: "package_name is not defined") unless params[:package_name]
+        raise(Error, error: :input_error,
+                     message: "package_version is not defined") unless params[:package_version]
       end
 
       def prepare
         docker.login!
-
         packager.before_prepare.each {|cmd| command! cmd}
 
-        packager.targets.map {|target|
-          os_name, os_version, target_package_name, target_package_version = target.split('-', 4)
-          params = merge_os_params(os_name)
-          params = merge_os_version_params(os_name, os_version, a: params) if os_version
-          params = merge_target_params(target, target_package_name, target_package_version, a: params) if target_package_name
-          params[:target] = target
-
-          check_params! params
-
-          [os_name, os_version, params]
-        }.each {|a| prepare_image(*a)}
+        targets.each {|target| prepare_image_for(target)}
 
         packager.after_prepare.each {|cmd| command! cmd}
-
         docker.logout!
       end
 
-      def prepare_image(os_name, os_version,
-                        prepare: [], build_dep: [],
-                        package_name:, package_version:, target:)
-        image = docker.new_image(os_name, os_version, target: target, package_name: package_name, package_version: package_version)
-        (Array(self.prepare_image_instructions(image)) + prepare).each do |cmd|
-          image.instruction(:RUN, "bash -lec \"#{cmd}\"")
+      def prepare_image_for(target)
+        (Array(prepare_image_instructions(target.image)) + target.prepare).each do |cmd|
+          target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")
         end
-        image.build_dep(Array(self.build_dep).to_set + build_dep)
-        docker.build_image!(image)
+        target.image.build_dep(Array(build_dep).to_set + target.build_dep)
+        docker.build_image! target.image
       end
 
       def build
         docker.login!
+
         puts "#{self.class}::build #TODO"
+
         docker.logout!
       end
 
@@ -390,21 +426,21 @@ curl -sSL https://get.rvm.io | bash -s stable},
         end
       end
 
-			def merge_os_params(os_name, **kwargs, &blk)
+      def merge_os_params(os_name, **kwargs, &blk)
         super(os_name, **kwargs) do |a, b|
           cannot_redefine_package_params!(b, redefine_for: "os '#{os_name}'")
           yield if block_given?
         end
       end
 
-			def merge_os_version_params(os_name, os_version, **kwargs, &blk)
+      def merge_os_version_params(os_name, os_version, **kwargs, &blk)
         super(os_name, os_version, **kwargs) do |a, b|
           cannot_redefine_package_params!(b, redefine_for: "os version '#{os_name}-#{os_version}'")
           yield if block_given?
         end
       end
 
-			def merge_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
+      def merge_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
         super(target, target_package_name, target_package_version, **kwargs) do |a, b|
           cannot_redefine_package_params!(b, redefine_for: "target '#{target}'")
           yield if block_given?
