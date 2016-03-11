@@ -590,6 +590,8 @@ git add -v .travis.yml
       ]
       install.push(*Array(packager.thepackager_install_instructions(latest: opts['latest'])))
 
+      env = packager.targets.map {|t| "THEPACKAGER_TARGET=#{t}"}
+
       packager.travis! packager.travis.merge(
         'dist' => 'trusty',
         'sudo' => 'required',
@@ -603,6 +605,7 @@ git add -v .travis.yml
           'provider' => 'script',
           'script' => 'thepackager deploy',
         },
+        'env' => env,
       )
       packager.git_precommit_init! unless packager.options_path.exist?
       packager.options! opts
