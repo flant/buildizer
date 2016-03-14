@@ -438,8 +438,6 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def prepare
-        return unless packager.enabled?
-
         docker.login!
 
         begin
@@ -460,7 +458,6 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build
-        return unless packager.enabled?
         targets.each {|target| build_target(target)}
       end
 
