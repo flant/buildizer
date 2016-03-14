@@ -174,7 +174,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build_dep(build_dep)
-        instruction :RUN, "apt-get build-dep -y #{build_dep.to_a.join(' ')}"
+        instruction :RUN, "apt-get build-dep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
       end
     end # Ubuntu
 
@@ -203,7 +203,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build_dep(build_dep)
-        instruction :RUN, "yum-builddep -y #{build_dep.to_a.join(' ')}"
+        instruction :RUN, "yum-builddep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
       end
 
       def add_repo(id:, name:, baseurl: nil, enabled: 1, gpgcheck: nil, gpgkey: nil, exclude: nil, includepkgs: nil, mirrorlist: nil)
