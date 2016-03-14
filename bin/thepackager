@@ -438,6 +438,8 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def prepare
+        return unless packager.enabled?
+
         docker.login!
 
         begin
@@ -458,6 +460,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build
+        return unless packager.enabled?
         targets.each {|target| build_target(target)}
       end
 
@@ -606,6 +609,10 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
     def initialized?
       options_path.exist?
+    end
+
+    def enabled?
+      not (ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']).empty?
     end
 
     def init!
