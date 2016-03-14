@@ -202,6 +202,16 @@ curl -sSL https://get.rvm.io | bash -s stable},
         'centos'
       end
 
+      def fpm_output_type
+        'rpm'
+      end
+
+      def fpm_extra_params
+        Array(super).tap do |res|
+          res << '--rpm-use-file-permissions'
+        end
+      end
+
       def build_dep(build_dep)
         instruction :RUN, "yum-builddep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
       end
@@ -293,9 +303,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
     def build_image!(image)
       pull_image! image
 
-      build_path = builder.build_path.join(image.os_name).join(image.os_version)
-      build_path.mkpath
-      build_path.join('Dockerfile').write [*image.instructions, nil].join("\n")
+      image_build_path(image).join('Dockerfile').write [*image.instructions, nil].join("\n")
       command! "docker build -t #{image.name} #{build_path}"
 
       push_image! image
@@ -303,6 +311,10 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
     def image_build_path(image)
       builder.build_path.join(image.os_name).join(image.os_version)
+    end
+
+    def image_runtime_build_path(image)
+      image_build_path(image).join('build')
     end
 
     def container_package_path
@@ -319,7 +331,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       command! [
         "docker run --rm",
         "-v #{builder.packager.package_path}:#{container_package_path}",
-        "-v #{image_build_path(image)}:#{container_build_path}",
+        "-v #{image_runtime_build_path(image)}:#{container_build_path}",
         image.name,
         "'#{cmd.join('; ')}'"
       ].join(' ')
@@ -452,6 +464,8 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def prepare_target_image(target)
+        docker.image_build_path(target.image).mkpath
+
         (Array(prepare_image_instructions(target)) + target.prepare).each do |cmd|
           target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")
         end
@@ -465,6 +479,8 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build_target(target)
+        docker.image_runtime_build_path(target.image).mkpath
+
         cmd = [
           "cd /package",
           *target.before_build,
@@ -497,7 +513,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
           raise(Error,
                 error: :input_error,
                 message: [
-                  "explicit definition of package_version in '#{build_type}' ",
+                  "explicit definition of package_version in #{build_type} ",
                   "build type is forbidden ",
                   "(use TRAVIS_TAG, CI_BUILD_TAG env variables)",
                 ].join) if params[:package_version]
@@ -515,7 +531,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
             message: [
               "cannot redefine #{param}",
               redefine_for ? "for #{redefine_for}" : nil,
-              "in '#{build_type}' build_type",
+              "in #{build_type} build_type",
             ].compact.join(' ')
           ) if params.key? param.to_s
         end
@@ -551,6 +567,15 @@ curl -sSL https://get.rvm.io | bash -s stable},
         end
       end
 
+      def check_params!(params)
+        super
+        if [:fpm_files, :fpm_config_files].all? {|param| params[param].empty?}
+          raise Error, error: :input_error,
+                       message: ["either of fpm_files or fpm_config_files ",
+                                 "required in #{build_type} build_type"].join
+        end
+      end
+
       def prepare_image_instructions(target)
         [*Array(target.image.install_ruby_instructions),
          *Array(target.image.install_fpm_instructions)]
@@ -566,7 +591,8 @@ curl -sSL https://get.rvm.io | bash -s stable},
               message: "unknown fpm_script event #{_when.inspect}"
             ) unless FPM_SCRIPT_EVENTS.include? _when
             res[_when] ||= {fpm_option: "--#{_when.split('_').join('-')}",
-                            file: docker.image_build_path(target.image).join("fpm_#{_when}.sh"),
+                            file: docker.image_runtime_build_path(target.image)
+                                        .join("fpm_#{_when}.sh"),
                             container_file: Pathname.new('/package/build').join("fpm_#{_when}.sh"),
                             cmd: []}
             res[_when][:cmd] += cmd
@@ -579,12 +605,15 @@ curl -sSL https://get.rvm.io | bash -s stable},
           desc[:file].chmod 0755
         end
 
+        version, release = target.package_version.split('-')
+
         p ["fpm -s dir",
          "--force",
          "-p #{docker.container_build_path}",
          "-t #{target.image.fpm_output_type}",
          "-n #{target.package_name}",
-         "-v #{target.package_version}",
+         "--version=#{version}",
+         "--iteration=#{release}",
          *fpm_script.values.map {|desc| "#{desc[:fpm_option]}=#{desc[:container_file]}"},
          *Array(target.image.fpm_extra_params),
          *target.fpm_config_files.values.map {|p| "--config-files=#{p}"},

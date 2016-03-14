@@ -2,3 +2,4 @@
 /.vagrant
 /thepackager*.gem
 *.swp
+.tags
