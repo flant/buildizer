@@ -115,6 +115,13 @@ module Thepackager
         raise
       end
 
+      def fpm_output_type
+        raise
+      end
+
+      def fpm_extra_params
+      end
+
       def build_dep(build_dep)
         raise
       end
@@ -153,6 +160,17 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       def os_name
         'ubuntu'
+      end
+
+      def fpm_output_type
+        'deb'
+      end
+
+      def fpm_extra_params
+        Array(super).tap do |res|
+          res << '--deb-use-file-permissions'
+          res << '--deb-no-default-config-files'
+        end
       end
 
       def build_dep(build_dep)
@@ -282,6 +300,30 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       push_image! image
     end
+
+    def image_build_path(image)
+      builder.build_path.join(image.os_name).join(image.os_version)
+    end
+
+    def container_package_path
+      Pathname.new('/package')
+    end
+
+    def container_build_path
+      container_package_path.join('build')
+    end
+
+    def run!(image, cmd:)
+      cmd = Array(cmd)
+
+      command! [
+        "docker run --rm",
+        "-v #{builder.packager.package_path}:#{container_package_path}",
+        "-v #{image_build_path(image)}:#{container_build_path}",
+        image.name,
+        "'#{cmd.join('; ')}'"
+      ].join(' ')
+    end
   end # Docker
 
   module Builder
@@ -295,7 +337,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       def initialize(packager)
         @packager = packager
 
-        @build_path = Pathname.new(ENV['PREFIX'] || 'build')
+        @build_path = Pathname.new(ENV['PREFIX'] || packager.package_path.join('build')).expand_path
         raise Error, message: "bad build prefix: '#{build_path}' is a file" if build_path.file?
         build_path.mkdir rescue nil
 
@@ -315,7 +357,10 @@ curl -sSL https://get.rvm.io | bash -s stable},
         raise
       end
 
-      def prepare_image_instructions(image)
+      def prepare_image_instructions(target)
+      end
+
+      def build_instructions(target)
       end
 
       def build_dep
@@ -397,15 +442,15 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
         begin
           packager.before_prepare.each {|cmd| command! cmd}
-          targets.each {|target| prepare_image_for(target)}
+          targets.each {|target| prepare_target_image(target)}
           packager.after_prepare.each {|cmd| command! cmd}
         ensure
           docker.logout!
         end
       end
 
-      def prepare_image_for(target)
-        (Array(prepare_image_instructions(target.image)) + target.prepare).each do |cmd|
+      def prepare_target_image(target)
+        (Array(prepare_image_instructions(target)) + target.prepare).each do |cmd|
           target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")
         end
         target.image.build_dep(Array(build_dep).to_set + target.build_dep)
@@ -413,11 +458,17 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build
-        targets.each {|target| build_for(target)}
+        targets.each {|target| build_target(target)}
       end
 
-      def build_for(target)
-        #TODO
+      def build_target(target)
+        cmd = [
+          "cd /package",
+          *target.before_build,
+          *Array(build_instructions(target)),
+        ]
+
+        docker.run! target.image, cmd: cmd
       end
 
       def deploy
@@ -426,6 +477,10 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end # Base
 
     class Fpm < Base
+      FPM_SCRIPT_EVENTS = [:before, :after].map {|at|
+                            [:install, :upgrade, :remove].map {|event|
+                              "#{at}_#{event}"}}.flatten
+
       def build_type
         'fpm'
       end
@@ -448,11 +503,6 @@ curl -sSL https://get.rvm.io | bash -s stable},
           params[:fpm_config_files] = packager.packagefile['fpm_config_files'].to_h
           params[:fpm_files] = packager.packagefile['fpm_files'].to_h
         end
-      end
-
-      def prepare_image_instructions(image)
-        [*Array(image.install_ruby_instructions),
-         *Array(image.install_fpm_instructions)]
       end
 
       def cannot_redefine_package_params!(params, redefine_for: nil)
@@ -497,6 +547,46 @@ curl -sSL https://get.rvm.io | bash -s stable},
           cannot_redefine_package_params!(params, redefine_for: "target '#{target}'")
         end
       end
+
+      def prepare_image_instructions(target)
+        [*Array(target.image.install_ruby_instructions),
+         *Array(target.image.install_fpm_instructions)]
+      end
+
+      def build_instructions(target)
+        fpm_script = target.fpm_script.reduce({}) do |res, spec|
+          cmd = Array(spec['do'])
+          next res unless cmd.any?
+          Array(spec['when']).each do |_when|
+            raise(
+              Error,
+              message: "unknown fpm_script event #{_when.inspect}"
+            ) unless FPM_SCRIPT_EVENTS.include? _when
+            res[_when] ||= {fpm_option: "--#{_when.split('_').join('-')}",
+                            file: docker.image_build_path(target.image).join("fpm_#{_when}.sh"),
+                            container_file: Pathname.new('/package/build').join("fpm_#{_when}.sh"),
+                            cmd: []}
+            res[_when][:cmd] += cmd
+          end
+          res
+        end
+
+        fpm_script.values.map do |desc|
+          desc[:file].write ["#!/bin/bash", *desc[:cmd], nil].join("\n")
+          desc[:file].chmod 0755
+        end
+
+        p ["fpm -s dir",
+         "--force",
+         "-p #{docker.container_build_path}",
+         "-t #{target.image.fpm_output_type}",
+         "-n #{target.package_name}",
+         "-v #{target.package_version}",
+         *fpm_script.values.map {|desc| "#{desc[:fpm_option]}=#{desc[:container_file]}"},
+         *Array(target.image.fpm_extra_params),
+         *target.fpm_config_files.values.map {|p| "--config-files=#{p}"},
+         *target.fpm_files.merge(target.fpm_config_files).map {|p1, p2| "#{p1}=#{p2}"}].join(' ')
+      end
     end # Fpm
   end # Builder
 
@@ -507,7 +597,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
     attr_reader :travis_path
 
     def initialize(options: {})
-      @package_path = Pathname.new(ENV['THEPACKAGER_PATH'] || '.')
+      @package_path = Pathname.new(ENV['THEPACKAGER_PATH'] || '.').expand_path
       @packagefile_path = package_path.join('Packagefile')
       @options_path = package_path.join('.thepackager.yml')
       @travis_path = package_path.join('.travis.yml')
