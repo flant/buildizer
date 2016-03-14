@@ -45,37 +45,50 @@ module Thepackager
   class Error < NetStatus::Exception
   end # Error
 
-  class Target
-    attr_reader :builder
-    attr_reader :image
+  module Target
+    class Base
+      attr_reader :builder
+      attr_reader :image
 
-    attr_reader :name
-    attr_reader :os_name
-    attr_reader :os_version
-    attr_reader :package_name
-    attr_reader :package_version
-    attr_reader :prepare
-    attr_reader :build_dep
+      attr_reader :name
+      attr_reader :package_name
+      attr_reader :package_version
+      attr_reader :prepare
+      attr_reader :build_dep
+      attr_reader :before_build
 
-    def initialize(builder,
-                   name:, os_name:, os_version:,
-                   package_name:, package_version:,
-                   prepare: [], build_dep: [])
-      @builder = builder
-      @name = name
-      @os_name = os_name
-      @os_version = os_version
-      @package_name = package_name
-      @package_version = package_version
-      @prepare = prepare
-      @build_dep = build_dep
+      def initialize(builder, image,
+                     name:, package_name:, package_version:,
+                     prepare: [], build_dep: [], before_build: [])
+        @builder = builder
+        @image = image
 
-      @image = builder.docker.new_image(self)
-    end
+        @name = name
+        @package_name = package_name
+        @package_version = package_version
+        @prepare = prepare
+        @build_dep = build_dep
+        @before_build = before_build
+      end
 
-    def docker_image
-      builder.packager.docker_image || "thepackager/#{package_name}"
-    end
+      def docker_image
+        "#{builder.packager.docker_image || "thepackager/#{package_name}"}:#{name}"
+      end
+    end # Base
+
+    class Fpm < Base
+      attr_reader :fpm_script
+      attr_reader :fpm_config_files
+      attr_reader :fpm_files
+
+      def initialize(builder, image, fpm_script: [], fpm_config_files: {}, fpm_files: {}, **kwargs)
+        super(builder, image, **kwargs)
+
+        @fpm_script = fpm_script
+        @fpm_config_files = fpm_config_files
+        @fpm_files = fpm_files
+      end
+    end # Fpm
   end # Target
 
   module Image
@@ -84,12 +97,12 @@ module Thepackager
 
       attr_reader :instructions
       attr_reader :docker
-      attr_reader :target
 
-      def initialize(docker, target, **kwargs)
+      attr_accessor :target
+
+      def initialize(docker, **kwargs)
         @instructions = []
         @docker = docker
-        @target = target
 
         instruction :FROM, base_image
       end
@@ -122,7 +135,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def name
-        "#{target.docker_image}:#{target.name}"
+        target.docker_image
       end
 
       def instruction(instruction, cmd)
@@ -133,9 +146,9 @@ curl -sSL https://get.rvm.io | bash -s stable},
     class Ubuntu < Base
       attr_reader :os_version
 
-      def initialize(docker, target, os_version, **kwargs)
+      def initialize(docker, os_version, **kwargs)
         @os_version = os_version
-        super(docker, target, **kwargs)
+        super(docker, **kwargs)
       end
 
       def os_name
@@ -148,23 +161,23 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end # Ubuntu
 
     class Ubuntu1204 < Ubuntu
-      def initialize(docker, target, **kwargs)
-        super(docker, target, '12.04', **kwargs)
+      def initialize(docker, **kwargs)
+        super(docker, '12.04', **kwargs)
       end
     end # Ubuntu1204
 
     class Ubuntu1404 < Ubuntu
-      def initialize(docker, target, **kwargs)
-        super(docker, target, '14.04', **kwargs)
+      def initialize(docker, **kwargs)
+        super(docker, '14.04', **kwargs)
       end
     end # Ubuntu1404
 
     class Centos < Base
       attr_reader :os_version
 
-      def initialize(docker, target, os_version, **kwargs)
+      def initialize(docker, os_version, **kwargs)
         @os_version = os_version
-        super(docker, target, **kwargs)
+        super(docker, **kwargs)
       end
 
       def os_name
@@ -191,14 +204,14 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end # Centos
 
     class Centos6 < Centos
-      def initialize(docker, target, **kwargs)
-        super(docker, target, 'centos6', **kwargs)
+      def initialize(docker, **kwargs)
+        super(docker, 'centos6', **kwargs)
       end
     end # Centos6
 
     class Centos7 < Centos
-      def initialize(docker, target, **kwargs)
-        super(docker, target, 'centos7', **kwargs)
+      def initialize(docker, **kwargs)
+        super(docker, 'centos7', **kwargs)
       end
     end # Centos7
   end # Image
@@ -220,8 +233,8 @@ curl -sSL https://get.rvm.io | bash -s stable},
       @server = server
     end
 
-    def new_image(target, **kwargs)
-      klass = ({
+    def image_klass(os_name, os_version)
+      ({
         'ubuntu' => {
           '12.04' => Image::Ubuntu1204,
           '14.04' => Image::Ubuntu1404,
@@ -232,13 +245,13 @@ curl -sSL https://get.rvm.io | bash -s stable},
           'centos7' => Image::Centos7,
           nil => Image::Centos7,
         },
-      }[target.os_name] || {})[target.os_version]
+      }[os_name] || {})[os_version]
+    end
 
-      unless klass
-        raise Error, message: "unknown os '#{[target.os_name, target.os_version].compact.join('-')}'"
-      end
-
-      klass.new(self, target, **kwargs)
+    def new_image(os_name, os_version, **kwargs)
+      klass = image_klass(os_name, os_version)
+      raise Error, message: "unknown os '#{[os_name, os_version].compact.join('-')}'" unless klass
+      klass.new(self, **kwargs)
     end
 
     def login!
@@ -298,75 +311,97 @@ curl -sSL https://get.rvm.io | bash -s stable},
         raise
       end
 
+      def target_klass
+        raise
+      end
+
       def prepare_image_instructions(image)
       end
 
       def build_dep
       end
 
-      def targets
-        @targets ||= packager.targets.map {|target|
-          os_name, os_version, target_package_name, target_package_version = target.split('-', 4)
-          params = merge_os_params(os_name)
-          params = merge_os_version_params(os_name, os_version, into: params) if os_version
-          params = merge_target_params(target, target_package_name, target_package_version,
-                                       into: params) if target_package_name
-          check_params! params
+      def new_target(target_name)
+        os_name, os_version, target_package_name, target_package_version = target_name.split('-', 4)
 
-          Target.new(self, name: target, os_name: os_name, os_version: os_version, **params)
-        }
+        image = docker.new_image(os_name, os_version)
+
+        params = merge_os_params(image.os_name)
+        params = merge_os_version_params(image.os_name, image.os_version, into: params)
+        params = merge_base_target_params(target_name, target_package_name, target_package_version,
+                                          into: params) if target_package_name
+        check_params! params
+
+        target_klass.new(self, image, name: target_name, **params).tap do |target|
+          image.target = target
+        end
       end
 
-      def base_image_params
+      def targets
+        @targets ||= packager.targets.map {|target_name| new_target(target_name)}
+      end
+
+      def initial_target_params
         {}.tap do |params|
           params[:package_name] = packager.package_name
           params[:package_version] = packager.package_version
           params[:prepare] = packager.prepare
           params[:build_dep] = packager.build_dep
+          params[:before_build] = packager.before_build
         end
       end
 
-      def merge_params(a: nil, b:, &blk)
-        a ||= base_image_params
+      def merge_params(into: nil, params:, &blk)
+        into ||= initial_target_params
+        params ||= {}
+        yield into, params if block_given?
+        do_merge_params into, params
+      end
 
+      def do_merge_params(into, params)
         {}.tap do |res|
-          yield a, b if block_given?
-          res[:package_name] = a[:package_name] || b['package_name']
-          res[:package_version] = a[:package_version] || b['package_version']
-          res[:prepare] = a[:prepare] + Array(b['prepare'])
-          res[:build_dep] = a[:build_dep] | Array(b['build_dep']).to_set
+          res[:package_name] = into[:package_name] || params['package_name']
+          res[:package_version] = into[:package_version] || params['package_version']
+          res[:prepare] = into[:prepare] + Array(params['prepare'])
+          res[:build_dep] = into[:build_dep] | Array(params['build_dep']).to_set
+          res[:before_build] = into[:before_build] + Array(params['before_build'])
         end
       end
 
       def merge_os_params(os_name, into: nil, &blk)
-        merge_params(a: into, b: packager.os_params(os_name), &blk)
+        merge_params(into: into, params: packager.os_params(os_name), &blk)
       end
 
       def merge_os_version_params(os_name, os_version, into: nil, &blk)
-        merge_params(a: into, b: packager.os_params([os_name, os_version].join('-')), &blk)
+        merge_params(into: into,
+                     params: packager.os_params([os_name, os_version].join('-')), &blk)
       end
 
-      def merge_target_params(target, target_package_name, target_package_version, into: nil, &blk)
-        merge_params(a: into,
-                     b: {'package_name' => target_package_name,
-                         'package_version' => target_package_version}, &blk)
+      def merge_base_target_params(target, target_package_name, target_package_version,
+                                   into: nil, &blk)
+        merge_params(into: into,
+                     params: {'package_name' => target_package_name,
+                              'package_version' => target_package_version}, &blk)
       end
 
       def check_params!(params)
-        raise(Error, error: :input_error,
-                     message: "package_name is not defined") unless params[:package_name]
-        raise(Error, error: :input_error,
-                     message: "package_version is not defined") unless params[:package_version]
+        [:package_name, :package_version].each do |param|
+          raise(Error,
+                error: :input_error,
+                message: "#{param} is not defined") unless params[param]
+        end
       end
 
       def prepare
         docker.login!
-        packager.before_prepare.each {|cmd| command! cmd}
 
-        targets.each {|target| prepare_image_for(target)}
-
-        packager.after_prepare.each {|cmd| command! cmd}
-        docker.logout!
+        begin
+          packager.before_prepare.each {|cmd| command! cmd}
+          targets.each {|target| prepare_image_for(target)}
+          packager.after_prepare.each {|cmd| command! cmd}
+        ensure
+          docker.logout!
+        end
       end
 
       def prepare_image_for(target)
@@ -378,11 +413,11 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def build
-        docker.login!
+        targets.each {|target| build_for(target)}
+      end
 
-        puts "#{self.class}::build #TODO"
-
-        docker.logout!
+      def build_for(target)
+        #TODO
       end
 
       def deploy
@@ -395,16 +430,23 @@ curl -sSL https://get.rvm.io | bash -s stable},
         'fpm'
       end
 
-      def base_image_params
+      def target_klass
+        Target::Fpm
+      end
+
+      def initial_target_params
         super.tap do |params|
           raise(Error,
-            error: :input_error,
-            message: [
-              "cannot define package_version in '#{build_type}'",
-              "build type (TRAVIS_TAG, CI_BUILD_TAG env variables)"
-            ].join(' ')
-          ) if params[:package_version]
+                error: :input_error,
+                message: [
+                  "explicit definition of package_version in '#{build_type}' ",
+                  "build type is forbidden ",
+                  "(use TRAVIS_TAG, CI_BUILD_TAG env variables)",
+                ].join) if params[:package_version]
           params[:package_version] = ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
+          params[:fpm_script] = Array(packager.packagefile['fpm_script'])
+          params[:fpm_config_files] = packager.packagefile['fpm_config_files'].to_h
+          params[:fpm_files] = packager.packagefile['fpm_files'].to_h
         end
       end
 
@@ -426,24 +468,33 @@ curl -sSL https://get.rvm.io | bash -s stable},
         end
       end
 
+      def do_merge_params(into, params)
+        super.tap do |res|
+          res[:fpm_script] = into[:fpm_script] + Array(params['fpm_script'])
+          res[:fpm_config_files] = into[:fpm_config_files].merge params['fpm_config_files'].to_h
+          res[:fpm_files] = into[:fpm_files].merge params['fpm_files'].to_h
+        end
+      end
+
       def merge_os_params(os_name, **kwargs, &blk)
-        super(os_name, **kwargs) do |a, b|
-          cannot_redefine_package_params!(b, redefine_for: "os '#{os_name}'")
-          yield if block_given?
+        super(os_name, **kwargs) do |into, params|
+          yield into, params if block_given?
+          cannot_redefine_package_params!(params, redefine_for: "os '#{os_name}'")
         end
       end
 
       def merge_os_version_params(os_name, os_version, **kwargs, &blk)
-        super(os_name, os_version, **kwargs) do |a, b|
-          cannot_redefine_package_params!(b, redefine_for: "os version '#{os_name}-#{os_version}'")
-          yield if block_given?
+        super(os_name, os_version, **kwargs) do |into, params|
+          yield into, params if block_given?
+          cannot_redefine_package_params!(params,
+                                          redefine_for: "os version '#{os_name}-#{os_version}'")
         end
       end
 
-      def merge_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
-        super(target, target_package_name, target_package_version, **kwargs) do |a, b|
-          cannot_redefine_package_params!(b, redefine_for: "target '#{target}'")
-          yield if block_given?
+      def merge_base_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
+        super(target, target_package_name, target_package_version, **kwargs) do |into, params|
+          yield into, params if block_given?
+          cannot_redefine_package_params!(params, redefine_for: "target '#{target}'")
         end
       end
     end # Fpm
@@ -624,6 +675,10 @@ git add -v .travis.yml
 
     def build_dep
       Array(packagefile['build_dep']).to_set
+    end
+
+    def before_build
+      Array(packagefile['before_build'])
     end
 
     def docker_server
