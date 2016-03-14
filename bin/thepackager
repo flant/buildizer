@@ -433,7 +433,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
         [:package_name, :package_version].each do |param|
           raise(Error,
                 error: :input_error,
-                message: "#{param} is not defined") unless params[param]
+                message: "#{param} is not defined") unless params[param] and not params[param].empty?
         end
       end
 
