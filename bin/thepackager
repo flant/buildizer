@@ -683,6 +683,9 @@ curl -sSL https://get.rvm.io | bash -s stable},
         'deploy' => {
           'provider' => 'script',
           'script' => 'thepackager deploy',
+          'on' => {
+            'tags' => true,
+          },
         },
         'env' => env,
       ))
