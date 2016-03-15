@@ -351,11 +351,12 @@ curl -sSL https://get.rvm.io | bash -s stable},
       container_package_path.join('build')
     end
 
-    def run!(image, cmd:)
+    def run!(image, cmd:, env: {})
       cmd = Array(cmd)
 
       command! p [
         "docker run --rm",
+        *env.map {|k,v| "-e #{k}=#{v}"},
         "-v #{builder.packager.package_path}:#{container_package_path}",
         "-v #{image_runtime_build_path(image)}:#{container_build_path}",
         image.name,
@@ -531,7 +532,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
            "package_cloud push #{target.package_cloud_path} \$PACKAGE ; ",
            "done"].join,
         ]
-        docker.run! target.image, cmd: cmd
+        docker.run! target.image, cmd: cmd, env: {PACKAGECLOUD_TOKEN: packager.package_cloud_token}
       end
     end # Base
 
@@ -865,6 +866,12 @@ git add -v .travis.yml
 
     def package_cloud
       packagefile['package_cloud']
+    end
+
+    def package_cloud_token
+      ENV['PACKAGECLOUD_TOKEN'] || begin
+        raise Error, error: :input_error, message: "PACKAGECLOUD_TOKEN env variable required"
+      end
     end
 
     def docker_username
