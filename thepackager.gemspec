@@ -19,11 +19,12 @@ Gem::Specification.new do |spec|
   spec.add_dependency "thor", ">= 0.19.1", "< 1.0"
   spec.add_dependency "net_status", ">= 0.0.1", "< 1.0"
   spec.add_dependency "mixlib-shellout", ">= 2.2.6", "< 3.0"
+  spec.add_dependency "travis", "~> 1.8", ">= 1.8.2"
+  spec.add_dependency "package_cloud", ">= 0.2", "< 1.0"
 
   spec.add_development_dependency "bundler", "~> 1.7"
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec", "~> 3.4", ">= 3.4.0"
   spec.add_development_dependency "pry", ">= 0.10.3", "< 1.0"
   spec.add_development_dependency 'pry-stack_explorer', '>= 0.4.9.2', '< 1.0'
-  spec.add_development_dependency "travis", "~> 1.8", ">= 1.8.2"
 end

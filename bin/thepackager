@@ -27,6 +27,7 @@ module Thepackager
     end
 
     def command(*command_args, do_raise: nil)
+      p command_args
       Mixlib::ShellOut.new(*command_args).tap do |cmd|
         cmd.live_stdout = $stdout
         cmd.run_command
@@ -78,7 +79,7 @@ module Thepackager
       end
 
       def package_cloud_path
-        "#{package_cloud}/#{image.os_name}/#{image.os_codename}"
+        "#{package_cloud}/#{image.os_package_cloud_name}/#{image.os_package_cloud_version}"
       end
     end # Base
 
@@ -117,8 +118,12 @@ module Thepackager
         raise
       end
 
-      def os_codename
-        raise
+      def os_package_cloud_name
+        os_name
+      end
+
+      def os_package_cloud_version
+        os_version
       end
 
       def os_version
@@ -134,21 +139,6 @@ module Thepackager
 
       def build_dep(build_dep)
         raise
-      end
-
-      def install_ruby_instructions(&blk)
-        [%Q{\
-curl -sSL https://rvm.io/mpapis.asc | gpg --import -; \
-curl -sSL https://get.rvm.io | bash -s stable},
-         %Q{rvm install 2.2.1 --quiet-curl}]
-      end
-
-      def install_fpm_instructions
-        'gem install fpm'
-      end
-
-      def install_package_cloud_instructions
-        'gem install package_cloud'
       end
 
       def base_image
@@ -174,6 +164,14 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       def os_name
         'ubuntu'
+      end
+
+      def os_codename
+        raise
+      end
+
+      def os_package_cloud_version
+        os_codename
       end
 
       def fpm_output_type
@@ -224,8 +222,12 @@ curl -sSL https://get.rvm.io | bash -s stable},
         'centos'
       end
 
-      def os_codename
-        os_version
+      def os_package_cloud_name
+        'el'
+      end
+
+      def os_package_cloud_version
+        os_version.match(/\d+$/).to_s.to_i
       end
 
       def fpm_output_type
@@ -526,14 +528,15 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def deploy_target(target)
-        cmd = [
-          "cd /package",
-          ["for PACKAGE in \$(find build/ -name '*.#{target.image.fpm_output_type}') ; do ",
-           "package_cloud yank #{target.package_cloud_path} \$PACKAGE ; ",
-           "package_cloud push #{target.package_cloud_path} \$PACKAGE ; ",
-           "done"].join,
-        ]
-        docker.run! target.image, cmd: cmd, env: {PACKAGECLOUD_TOKEN: packager.package_cloud_token}
+        cmd = Dir[docker.image_runtime_build_path(target.image)
+                        .join("*.#{target.image.fpm_output_type}")]
+                  .map {|p| Pathname.new(p)}
+                  .map {|p| ["package_cloud yank #{target.package_cloud_path} #{p.basename}",
+                             "package_cloud push #{target.package_cloud_path} #{p}"]}
+                  .each {|yank, push|
+                    command yank
+                    command! push
+                  }
       end
     end # Base
 
@@ -616,10 +619,6 @@ curl -sSL https://get.rvm.io | bash -s stable},
                        message: ["either of fpm_files or fpm_config_files ",
                                  "required in #{build_type} build_type"].join
         end
-      end
-
-      def prepare_image_instructions(target)
-        target.image.install_fpm_instructions
       end
 
       def build_instructions(target)
