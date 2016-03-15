@@ -319,6 +319,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end
 
     def pull_image!(image)
+      command "docker pull #{image.base_image}"
       command "docker pull #{image.name}"
     end
 
