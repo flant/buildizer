@@ -761,6 +761,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
         'before_script' => 'thepackager prepare',
         'script' => 'thepackager build',
         'deploy' => {
+          'skip_cleanup' => true,
           'provider' => 'script',
           'script' => 'thepackager deploy',
           'on' => {
