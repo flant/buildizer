@@ -304,7 +304,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       pull_image! image
 
       image_build_path(image).join('Dockerfile').write [*image.instructions, nil].join("\n")
-      command! "docker build -t #{image.name} #{build_path}"
+      command! "docker build -t #{image.name} #{image_build_path(image)}"
 
       push_image! image
     end
