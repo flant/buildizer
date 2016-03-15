@@ -53,12 +53,13 @@ module Thepackager
       attr_reader :name
       attr_reader :package_name
       attr_reader :package_version
+      attr_reader :package_cloud
       attr_reader :prepare
       attr_reader :build_dep
       attr_reader :before_build
 
       def initialize(builder, image,
-                     name:, package_name:, package_version:,
+                     name:, package_name:, package_version:, package_cloud:,
                      prepare: [], build_dep: [], before_build: [])
         @builder = builder
         @image = image
@@ -66,6 +67,7 @@ module Thepackager
         @name = name
         @package_name = package_name
         @package_version = package_version
+        @package_cloud = package_cloud
         @prepare = prepare
         @build_dep = build_dep
         @before_build = before_build
@@ -73,6 +75,10 @@ module Thepackager
 
       def docker_image
         "#{builder.packager.docker_image || "thepackager/#{package_name}"}:#{name}"
+      end
+
+      def package_cloud_path
+        "#{package_cloud}/#{image.os_name}/#{image.os_codename}"
       end
     end # Base
 
@@ -111,6 +117,10 @@ module Thepackager
         raise
       end
 
+      def os_codename
+        raise
+      end
+
       def os_version
         raise
       end
@@ -135,6 +145,10 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       def install_fpm_instructions
         'gem install fpm'
+      end
+
+      def install_package_cloud_instructions
+        'gem install package_cloud'
       end
 
       def base_image
@@ -182,11 +196,19 @@ curl -sSL https://get.rvm.io | bash -s stable},
       def initialize(docker, **kwargs)
         super(docker, '12.04', **kwargs)
       end
+
+      def os_codename
+        'precise'
+      end
     end # Ubuntu1204
 
     class Ubuntu1404 < Ubuntu
       def initialize(docker, **kwargs)
         super(docker, '14.04', **kwargs)
+      end
+
+      def os_codename
+        'trusty'
       end
     end # Ubuntu1404
 
@@ -200,6 +222,10 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       def os_name
         'centos'
+      end
+
+      def os_codename
+        os_version
       end
 
       def fpm_output_type
@@ -328,7 +354,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
     def run!(image, cmd:)
       cmd = Array(cmd)
 
-      command! [
+      command! p [
         "docker run --rm",
         "-v #{builder.packager.package_path}:#{container_package_path}",
         "-v #{image_runtime_build_path(image)}:#{container_build_path}",
@@ -402,6 +428,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
         {}.tap do |params|
           params[:package_name] = packager.package_name
           params[:package_version] = packager.package_version
+          params[:package_cloud] = packager.package_cloud
           params[:prepare] = packager.prepare
           params[:build_dep] = packager.build_dep
           params[:before_build] = packager.before_build
@@ -419,6 +446,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
         {}.tap do |res|
           res[:package_name] = into[:package_name] || params['package_name']
           res[:package_version] = into[:package_version] || params['package_version']
+          res[:package_cloud] = into[:package_cloud]
           res[:prepare] = into[:prepare] + Array(params['prepare'])
           res[:build_dep] = into[:build_dep] | Array(params['build_dep']).to_set
           res[:before_build] = into[:before_build] + Array(params['before_build'])
@@ -442,7 +470,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def check_params!(params)
-        [:package_name, :package_version].each do |param|
+        [:package_name, :package_version, :package_cloud].each do |param|
           raise(Error,
                 error: :input_error,
                 message: "#{param} is not defined") unless params[param] and not params[param].empty?
@@ -491,7 +519,19 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def deploy
-        puts "#{self.class}::deploy #TODO"
+        return unless packager.enabled?
+        targets.each {|target| deploy_target(target)}
+      end
+
+      def deploy_target(target)
+        cmd = [
+          "cd /package",
+          ["for PACKAGE in \$(find build/ -name '*.#{target.image.fpm_output_type}') ; do ",
+           "package_cloud yank #{target.package_cloud_path} \$PACKAGE ; ",
+           "package_cloud push #{target.package_cloud_path} \$PACKAGE ; ",
+           "done"].join,
+        ]
+        docker.run! target.image, cmd: cmd
       end
     end # Base
 
@@ -577,8 +617,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
       end
 
       def prepare_image_instructions(target)
-        [*Array(target.image.install_ruby_instructions),
-         *Array(target.image.install_fpm_instructions)]
+        target.image.install_fpm_instructions
       end
 
       def build_instructions(target)
@@ -612,7 +651,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
         version, release = target.package_version.split('-')
 
-        p ["fpm -s dir",
+        ["fpm -s dir",
          "--force",
          "-p #{docker.container_build_path}",
          "-t #{target.image.fpm_output_type}",
@@ -676,7 +715,7 @@ curl -sSL https://get.rvm.io | bash -s stable},
     end
 
     def deploy!
-      builder.deploy # TODO
+      builder.deploy
     end
 
     def packagefile
@@ -821,6 +860,10 @@ git add -v .travis.yml
 
     def docker_image
       packagefile['image']
+    end
+
+    def package_cloud
+      packagefile['package_cloud']
     end
 
     def docker_username
