@@ -761,15 +761,8 @@ module Thepackager
         'install' => install,
         'before_script' => 'thepackager prepare',
         'script' => 'thepackager build',
-        'deploy' => {
-          'skip_cleanup' => true,
-          'provider' => 'script',
-          'script' => 'thepackager deploy',
-          'on' => {
-            'tags' => true,
-          },
-        },
         'env' => env,
+        'after_success' => 'thepackager deploy',
       ))
       @travis = nil
     end
