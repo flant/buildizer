@@ -583,9 +583,14 @@ curl -sSL https://get.rvm.io | bash -s stable},
 
       def build_instructions(target)
         fpm_script = target.fpm_script.reduce({}) do |res, spec|
+          conditions = Array(spec['when'])
+          raise Error, message: ["no when conditions given ",
+                                 "for fpm_script of target ",
+                                 "'#{target.name}'"].join unless conditions.any?
+
           cmd = Array(spec['do'])
           next res unless cmd.any?
-          Array(spec['when']).each do |_when|
+          conditions.each do |_when|
             raise(
               Error,
               message: "unknown fpm_script event #{_when.inspect}"
