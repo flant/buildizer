@@ -563,9 +563,9 @@ module Buildizer
                   "(use TRAVIS_TAG, CI_BUILD_TAG env variables)",
                 ].join) if params[:package_version]
           params[:package_version] = ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
-          params[:fpm_script] = Array(packager.packagefile['fpm_script'])
-          params[:fpm_config_files] = packager.packagefile['fpm_config_files'].to_h
-          params[:fpm_files] = packager.packagefile['fpm_files'].to_h
+          params[:fpm_script] = Array(packager.buildizer_conf['fpm_script'])
+          params[:fpm_config_files] = packager.buildizer_conf['fpm_config_files'].to_h
+          params[:fpm_files] = packager.buildizer_conf['fpm_files'].to_h
         end
       end
 
@@ -669,13 +669,13 @@ module Buildizer
 
   class Packager
     attr_reader :package_path
-    attr_reader :packagefile_path
+    attr_reader :buildizer_conf_path
     attr_reader :options_path
     attr_reader :travis_path
 
     def initialize(options: {})
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
-      @packagefile_path = package_path.join('Packagefile')
+      @buildizer_conf_path = package_path.join('Buildizer')
       @options_path = package_path.join('.buildizer.yml')
       @travis_path = package_path.join('.travis.yml')
       @_options = options
@@ -719,8 +719,8 @@ module Buildizer
       builder.deploy
     end
 
-    def packagefile
-      @packagefile ||= YAML.load(packagefile_path.read)
+    def buildizer_conf
+      @buildizer_conf ||= YAML.load(buildizer_conf_path.read)
     end
 
     def options
@@ -810,27 +810,27 @@ git add -v .travis.yml
     end
 
     def package_name
-      packagefile['package_name']
+      buildizer_conf['package_name']
     end
 
     def package_version
-      packagefile['package_version']
+      buildizer_conf['package_version']
     end
 
     def os_params(os)
-      packagefile['os'].to_h[os.to_s].to_h
+      buildizer_conf['os'].to_h[os.to_s].to_h
     end
 
     def before_prepare
-      Array(packagefile['before_prepare'])
+      Array(buildizer_conf['before_prepare'])
     end
 
     def after_prepare
-      Array(packagefile['after_prepare'])
+      Array(buildizer_conf['after_prepare'])
     end
 
     def targets
-      targets = Array(packagefile['target'])
+      targets = Array(buildizer_conf['target'])
       restrict_targets = ENV['BUILDIZER_TARGET']
       restrict_targets = restrict_targets.split(',').map(&:strip) if restrict_targets
       targets = targets & restrict_targets if restrict_targets
@@ -838,27 +838,27 @@ git add -v .travis.yml
     end
 
     def prepare
-      Array(packagefile['prepare'])
+      Array(buildizer_conf['prepare'])
     end
 
     def build_dep
-      Array(packagefile['build_dep']).to_set
+      Array(buildizer_conf['build_dep']).to_set
     end
 
     def before_build
-      Array(packagefile['before_build'])
+      Array(buildizer_conf['before_build'])
     end
 
     def docker_server
-      packagefile['docker_server']
+      buildizer_conf['docker_server']
     end
 
     def docker_image
-      packagefile['image']
+      buildizer_conf['image']
     end
 
     def package_cloud
-      packagefile['package_cloud']
+      buildizer_conf['package_cloud']
     end
 
     def package_cloud_token
@@ -887,7 +887,7 @@ git add -v .travis.yml
 
     def builder
       @builder ||= begin
-        build_type = packagefile['build_type']
+        build_type = buildizer_conf['build_type']
         klass = {'fpm' => Builder::Fpm}[build_type]
         raise Error, error: :input_error, message: "unknown build_type '#{build_type}'" unless klass
         klass.new(self)
