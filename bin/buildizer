@@ -10,7 +10,7 @@ require 'mixlib/shellout'
 require 'net_status'
 require 'pry'
 
-module Thepackager
+module Buildizer
   module Refine
     refine String do
       def underscore
@@ -75,7 +75,7 @@ module Thepackager
       end
 
       def docker_image
-        "#{builder.packager.docker_image || "thepackager/#{package_name}"}:#{name}"
+        "#{builder.packager.docker_image || "buildizer/#{package_name}"}:#{name}"
       end
 
       def package_cloud_path
@@ -142,7 +142,7 @@ module Thepackager
       end
 
       def base_image
-        "thepackager/#{os_name}:#{os_version}"
+        "buildizer/#{os_name}:#{os_version}"
       end
 
       def name
@@ -255,7 +255,7 @@ module Thepackager
 #{exclude ? "\\nexclude=#{exclude}" : nil}\
 #{includepkgs ? "\\nincludepkgs=#{includepkgs}" : nil}"
 
-        instruction :RUN, "bash -lec \"echo -e '#{repo}' >> /etc/yum.repos.d/CentOS-Extra-Thepackager.repo\""
+        instruction :RUN, "bash -lec \"echo -e '#{repo}' >> /etc/yum.repos.d/CentOS-Extra-Buildizer.repo\""
       end
     end # Centos
 
@@ -674,9 +674,9 @@ module Thepackager
     attr_reader :travis_path
 
     def initialize(options: {})
-      @package_path = Pathname.new(ENV['THEPACKAGER_PATH'] || '.').expand_path
+      @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @packagefile_path = package_path.join('Packagefile')
-      @options_path = package_path.join('.thepackager.yml')
+      @options_path = package_path.join('.buildizer.yml')
       @travis_path = package_path.join('.travis.yml')
       @_options = options
     end
@@ -748,9 +748,9 @@ module Thepackager
         'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine=1.9.1-0~trusty', # FIXME [https://github.com/docker/docker/issues/20316]
         'echo "docker-engine hold" | sudo dpkg --set-selections',
       ]
-      install.push(*Array(thepackager_install_instructions(latest: options['latest'])))
+      install.push(*Array(buildizer_install_instructions(latest: options['latest'])))
 
-      env = targets.map {|t| "THEPACKAGER_TARGET=#{t}"}
+      env = targets.map {|t| "BUILDIZER_TARGET=#{t}"}
 
       travis_path.write YAML.dump(travis.merge(
         'dist' => 'trusty',
@@ -759,10 +759,10 @@ module Thepackager
         'language' => 'ruby',
         'rvm' => '2.2.1',
         'install' => install,
-        'before_script' => 'thepackager prepare',
-        'script' => 'thepackager build',
+        'before_script' => 'buildizer prepare',
+        'script' => 'buildizer build',
         'env' => env,
-        'after_success' => 'thepackager deploy',
+        'after_success' => 'buildizer deploy',
       ))
       @travis = nil
     end
@@ -797,7 +797,7 @@ module Thepackager
 
       git_precommit_path.write <<-EOF
 #!/bin/bash
-thepackager update
+buildizer update
 git add -v .travis.yml
       EOF
       git_precommit_path.chmod 0755
@@ -831,7 +831,7 @@ git add -v .travis.yml
 
     def targets
       targets = Array(packagefile['target'])
-      restrict_targets = ENV['THEPACKAGER_TARGET']
+      restrict_targets = ENV['BUILDIZER_TARGET']
       restrict_targets = restrict_targets.split(',').map(&:strip) if restrict_targets
       targets = targets & restrict_targets if restrict_targets
       targets
@@ -868,20 +868,20 @@ git add -v .travis.yml
     end
 
     def docker_username
-      ENV['THEPACKAGER_DOCKER_USERNAME'] || begin
-        raise Error, error: :input_error, message: "THEPACKAGER_DOCKER_USERNAME env variable required"
+      ENV['BUILDIZER_DOCKER_USERNAME'] || begin
+        raise Error, error: :input_error, message: "BUILDIZER_DOCKER_USERNAME env variable required"
       end
     end
 
     def docker_password
-      ENV['THEPACKAGER_DOCKER_PASSWORD'] || begin
-        raise Error, error: :input_error, message: "THEPACKAGER_DOCKER_PASSWORD env variable required"
+      ENV['BUILDIZER_DOCKER_PASSWORD'] || begin
+        raise Error, error: :input_error, message: "BUILDIZER_DOCKER_PASSWORD env variable required"
       end
     end
 
     def docker_email
-      ENV['THEPACKAGER_DOCKER_EMAIL'] || begin
-        raise Error, error: :input_error, message: "THEPACKAGER_DOCKER_EMAIL env variable required"
+      ENV['BUILDIZER_DOCKER_EMAIL'] || begin
+        raise Error, error: :input_error, message: "BUILDIZER_DOCKER_EMAIL env variable required"
       end
     end
 
@@ -894,25 +894,25 @@ git add -v .travis.yml
       end
     end
 
-    def thepackager_install_instructions(latest: nil)
+    def buildizer_install_instructions(latest: nil)
       if latest
-        ['git clone https://github.com/flant/thepackager ~/thepackager',
-         'echo "export BUNDLE_GEMFILE=~/thepackager/Gemfile" | tee -a ~/.bashrc',
-         'export BUNDLE_GEMFILE=~/thepackager/Gemfile',
+        ['git clone https://github.com/flant/buildizer ~/buildizer',
+         'echo "export BUNDLE_GEMFILE=~/buildizer/Gemfile" | tee -a ~/.bashrc',
+         'export BUNDLE_GEMFILE=~/buildizer/Gemfile',
          'gem install bundler',
          'bundle install',
         ]
       else
-        'gem install thepackager'
+        'gem install buildizer'
       end
     end
   end # Packager
 
   class Cli < Thor
-    desc "init", "Initialize settings (.travis.yml, .thepackager.yml, git pre-commit hook)"
+    desc "init", "Initialize settings (.travis.yml, .buildizer.yml, git pre-commit hook)"
     method_option :latest,
       type: :boolean,
-      desc: "use thepackager github master branch"
+      desc: "use buildizer github master branch"
     def init
       Packager.new(options: options).init!
     end
@@ -922,7 +922,7 @@ git add -v .travis.yml
       Packager.new(options: options).update!
     end
 
-    desc "deinit", "Deinitialize settings (.thepackager.yml, git pre-commit hook)"
+    desc "deinit", "Deinitialize settings (.buildizer.yml, git pre-commit hook)"
     def deinit
       Packager.new(options: options).deinit!
     end
@@ -942,11 +942,11 @@ git add -v .travis.yml
       Packager.new(options: options).deploy!
     end
   end # Cli
-end # Thepackager
+end # Buildizer
 
 begin
-  Thepackager::Cli.start
-rescue Thepackager::Error => e
+  Buildizer::Cli.start
+rescue Buildizer::Error => e
   $stderr.puts [e.net_status[:error], e.net_status[:message]].compact.join(': ')
   exit 1
 end

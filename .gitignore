@@ -1,5 +1,5 @@
 /Packagefile
 /.vagrant
-/thepackager*.gem
+/buildizer*.gem
 *.swp
 .tags

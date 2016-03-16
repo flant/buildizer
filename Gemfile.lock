@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    thepackager (0.0.1)
+    buildizer (0.0.1)
       mixlib-shellout (>= 2.2.6, < 3.0)
       net_status (>= 0.0.1, < 1.0)
       package_cloud (>= 0.2, < 1.0)
@@ -102,7 +102,7 @@ DEPENDENCIES
   pry-stack_explorer (>= 0.4.9.2, < 1.0)
   rake (~> 10.0)
   rspec (~> 3.4, >= 3.4.0)
-  thepackager!
+  buildizer!
 
 BUNDLED WITH
    1.11.2

@@ -1,18 +1,18 @@
-require File.expand_path("../lib/thepackager/version", __FILE__)
+require File.expand_path("../lib/buildizer/version", __FILE__)
 
 Gem::Specification.new do |spec|
-  spec.name = "thepackager"
-  spec.version = Thepackager::VERSION
+  spec.name = "buildizer"
+  spec.version = Buildizer::VERSION
   spec.authors = ["flant"]
   spec.email = "256@flant.com"
 
   spec.summary = "Packaging tool"
   spec.description = "#{spec.summary}."
   spec.license = "MIT"
-  spec.homepage = "https://github.com/flant/thepackager"
+  spec.homepage = "https://github.com/flant/buildizer"
 
   spec.files = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
-  spec.executables = ["thepackager"]
+  spec.executables = ["buildizer"]
 
   spec.required_ruby_version = ">= 2.2.1"
 

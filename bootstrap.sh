@@ -18,5 +18,7 @@ rvm install 2.2.1 --quiet-curl
 rvm --default use 2.2.1
 
 cd /vagrant
-gem build thepackager.gemspec
-gem install ./thepackager-*.gem
+echo "export BUNDLE_GEMFILE=~/buildizer/Gemfile" | tee -a ~/.bashrc
+export BUNDLE_GEMFILE=~/buildizer/Gemfile
+gem install bundler
+bundle install
