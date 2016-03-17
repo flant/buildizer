@@ -8,7 +8,7 @@ module Buildizer
       end
 
       def construct_packager(options)
-        Packager.new(options: {latest: options[:latest]}, debug: options[:debug])
+        Packager.new(options: {'latest' => options['latest']}, debug: options['debug'])
       end
     end # << self
 
