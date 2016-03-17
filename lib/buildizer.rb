@@ -6,7 +6,6 @@ require 'shellfold'
 
 require 'buildizer/version'
 require 'buildizer/refine'
-require 'buildizer/concern'
 require 'buildizer/error'
 require 'buildizer/docker'
 require 'buildizer/cli'

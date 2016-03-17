@@ -1,8 +1,6 @@
 module Buildizer
   module Builder
     class Base
-      include Concern
-
       attr_reader :packager
       attr_reader :build_path
       attr_reader :docker
@@ -118,9 +116,9 @@ module Buildizer
         docker.login!
 
         begin
-          packager.before_prepare.each {|cmd| command! cmd, desc: "Before prepare command: #{cmd}"}
+          packager.before_prepare.each {|cmd| packager.command! cmd, desc: "Before prepare command: #{cmd}"}
           targets.each {|target| prepare_target_image(target)}
-          packager.after_prepare.each {|cmd| command! cmd, desc: "After prepare command: #{cmd}"}
+          packager.after_prepare.each {|cmd| packager.command! cmd, desc: "After prepare command: #{cmd}"}
         ensure
           docker.logout!
         end
@@ -166,8 +164,8 @@ module Buildizer
                              "package_cloud push #{target.package_cloud_path} #{p}",
                              p.basename]}
                   .each {|yank, push, package|
-                    command yank, desc: "Package cloud yank package '#{package}'"
-                    command! push, desc: "Package cloud push package '#{package}'"
+                    packager.command yank, desc: "Package cloud yank package '#{package}'"
+                    packager.command! push, desc: "Package cloud push package '#{package}'"
                   }
       end
     end # Base

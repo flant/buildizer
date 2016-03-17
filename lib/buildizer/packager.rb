@@ -4,13 +4,15 @@ module Buildizer
     attr_reader :buildizer_conf_path
     attr_reader :options_path
     attr_reader :travis_path
+    attr_reader :debug
 
-    def initialize(options: {})
+    def initialize(options: {}, debug: false)
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @buildizer_conf_path = package_path.join('Buildizer')
       @options_path = package_path.join('.buildizer.yml')
       @travis_path = package_path.join('.travis.yml')
       @_options = options
+      @debug = debug
     end
 
     def initialized?
@@ -237,6 +239,18 @@ git add -v .travis.yml
       else
         'gem install buildizer'
       end
+    end
+
+    def command(*args, do_raise: false, **kwargs)
+      Shellfold.run(*args, live_log: debug, **kwargs).tap do |cmd|
+        if not cmd.status.success? and do_raise
+          raise Error.new(error: :error, message: "external command error")
+        end
+      end
+    end
+
+    def command!(*args, **kwargs)
+      command(*args, do_raise: true, log_failure: true, **kwargs)
     end
   end # Packager
 end # Buildizer

@@ -1,8 +1,6 @@
 module Buildizer
   module Image
     class Base
-      include Concern
-
       attr_reader :instructions
       attr_reader :docker
 

@@ -1,36 +1,58 @@
 module Buildizer
   class Cli < ::Thor
+    class << self
+      def shared_options
+        (@shared_options || {}).each do |name, options|
+          method_option name, options
+        end
+      end
+
+      def construct_packager(options)
+        Packager.new(options: {latest: options[:latest]}, debug: options[:debug])
+      end
+    end # << self
+
+    @shared_options = {
+      debug: {type: :boolean, default: false, desc: "turn on live logging for external commands"},
+    }
+
     desc "init", "Initialize settings (.travis.yml, .buildizer.yml, git pre-commit hook)"
+    shared_options
     method_option :latest,
       type: :boolean,
       desc: "use buildizer github master branch"
     def init
-      Packager.new(options: options).init!
+      self.class.construct_packager(options).init!
     end
 
     desc "update", "Regenerate .travis.yml"
+    shared_options
     def update
-      Packager.new(options: options).update!
+      self.class.construct_packager(options).update!
     end
 
     desc "deinit", "Deinitialize settings (.buildizer.yml, git pre-commit hook)"
+    shared_options
     def deinit
-      Packager.new(options: options).deinit!
+      self.class.construct_packager(options).deinit!
     end
 
     desc "prepare", "Prepare images for building packages"
+    shared_options
     def prepare
-      Packager.new(options: options).prepare!
+      self.class.construct_packager(options).prepare!
     end
 
     desc "build", "Build packages"
+    shared_options
     def build
-      Packager.new(options: options).build!
+      self.class.construct_packager(options).build!
     end
 
     desc "deploy", "Deploy packages"
+    shared_options
     def deploy
-      Packager.new(options: options).deploy!
+      self.class.construct_packager(options).deploy!
     end
   end # Cli
 end # Buildizer

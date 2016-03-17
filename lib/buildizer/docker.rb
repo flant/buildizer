@@ -1,7 +1,5 @@
 module Buildizer
   class Docker
-    include Concern
-
     attr_reader :builder
     attr_reader :username
     attr_reader :password
@@ -40,27 +38,27 @@ module Buildizer
     def login!
       docker_login = ["docker login --email=#{email} --username=#{username} --password=#{password}"]
       docker_login << "--server=#{server}" if server
-      command! docker_login.join(' '), desc: "Docker login"
+      builder.packager.command! docker_login.join(' '), desc: "Docker login"
     end
 
     def logout!
-      command! 'docker logout', desc: "Docker logout"
+      builder.packager.command! 'docker logout', desc: "Docker logout"
     end
 
     def pull_image!(image)
-      command "docker pull #{image.base_image}", desc: "Docker pull #{image.base_image}"
-      command "docker pull #{image.name}", desc: "Docker pull #{image.name}"
+      builder.packager.command "docker pull #{image.base_image}", desc: "Docker pull #{image.base_image}"
+      builder.packager.command "docker pull #{image.name}", desc: "Docker pull #{image.name}"
     end
 
     def push_image!(image)
-      command! "docker push #{image.name}", desc: "Docker push #{image.name}"
+      builder.packager.command! "docker push #{image.name}", desc: "Docker push #{image.name}"
     end
 
     def build_image!(image)
       pull_image! image
 
       image_build_path(image).join('Dockerfile').write [*image.instructions, nil].join("\n")
-      command! "docker build -t #{image.name} #{image_build_path(image)}", desc: "Docker build image #{image.name}"
+      builder.packager.command! "docker build -t #{image.name} #{image_build_path(image)}", desc: "Docker build image #{image.name}"
 
       push_image! image
     end
@@ -84,7 +82,7 @@ module Buildizer
     def run!(image, cmd:, env: {})
       cmd = Array(cmd)
 
-      command! [
+      builder.packager.command! [
         "docker run --rm",
         *env.map {|k,v| "-e #{k}=#{v}"},
         "-v #{builder.packager.package_path}:#{container_package_path}",
