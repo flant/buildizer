@@ -2,7 +2,7 @@ require 'thor'
 require 'yaml'
 require 'net_status'
 require 'pathname'
-require 'mixlib/shellout'
+require 'shellfold'
 
 require 'buildizer/version'
 require 'buildizer/refine'

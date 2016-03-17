@@ -118,9 +118,9 @@ module Buildizer
         docker.login!
 
         begin
-          packager.before_prepare.each {|cmd| command! cmd}
+          packager.before_prepare.each {|cmd| command! cmd, desc: "Before prepare command: #{cmd}"}
           targets.each {|target| prepare_target_image(target)}
-          packager.after_prepare.each {|cmd| command! cmd}
+          packager.after_prepare.each {|cmd| command! cmd, desc: "After prepare command: #{cmd}"}
         ensure
           docker.logout!
         end
@@ -163,10 +163,11 @@ module Buildizer
                         .join("*.#{target.image.fpm_output_type}")]
                   .map {|p| Pathname.new(p)}
                   .map {|p| ["package_cloud yank #{target.package_cloud_path} #{p.basename}",
-                             "package_cloud push #{target.package_cloud_path} #{p}"]}
-                  .each {|yank, push|
-                    command yank
-                    command! push
+                             "package_cloud push #{target.package_cloud_path} #{p}",
+                             p.basename]}
+                  .each {|yank, push, package|
+                    command yank, desc: "Package cloud yank package '#{package}'"
+                    command! push, desc: "Package cloud push package '#{package}'"
                   }
       end
     end # Base

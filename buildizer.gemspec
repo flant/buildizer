@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "thor", ">= 0.19.1", "< 1.0"
   spec.add_dependency "net_status", ">= 0.0.1", "< 1.0"
-  spec.add_dependency "mixlib-shellout", ">= 2.2.6", "< 3.0"
+  spec.add_dependency "shellfold", ">= 0.0.1", "< 1.0"
   spec.add_dependency "package_cloud", ">= 0.2", "< 1.0"
 
   spec.add_development_dependency "bundler", "~> 1.7"
