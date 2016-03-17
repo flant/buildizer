@@ -58,7 +58,11 @@ module Buildizer
     end
 
     def options
-      @options ||= (YAML.load(options_path.read) rescue {}).merge(@_options)
+      @options ||= (YAML.load(options_path.read) rescue {}).tap do |res|
+        @_options.each do |k, v|
+          res[k] = v unless v.nil?
+        end
+      end
     end
 
     def options_setup!
