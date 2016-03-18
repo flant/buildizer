@@ -49,7 +49,8 @@ module Buildizer
       end
 
       def native_build_instructions(builder, target)
-        source_name = "#{target.package_name}-#{target.package_version}"
+        version, release = target.package_version.split('-')
+        source_name = "#{target.package_name}-#{version}"
         source_archive_path = Pathname.new('/package.tar.gz')
         target_spec_name = "#{target.package_name}.spec"
 
