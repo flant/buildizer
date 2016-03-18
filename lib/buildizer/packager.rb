@@ -54,7 +54,7 @@ module Buildizer
     end
 
     def buildizer_conf
-      @buildizer_conf ||= YAML.load(buildizer_conf_path.read)
+      @buildizer_conf ||= (YAML.load((buildizer_conf_path.read rescue "")) || {})
     end
 
     def options
@@ -155,6 +155,10 @@ git add -v .travis.yml
       buildizer_conf['package_version']
     end
 
+    def package_version_tag
+      ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
+    end
+
     def os_params(os)
       buildizer_conf['os'].to_h[os.to_s].to_h
     end
@@ -226,7 +230,9 @@ git add -v .travis.yml
     def builder
       @builder ||= begin
         build_type = buildizer_conf['build_type']
-        klass = {'fpm' => Builder::Fpm}[build_type]
+        raise Error, error: :input_error, message: "no build_type given" unless build_type
+        klass = {fpm: Builder::Fpm,
+                 native: Builder::Native}[build_type.to_s.to_sym]
         raise Error, error: :input_error, message: "unknown build_type '#{build_type}'" unless klass
         klass.new(self)
       end

@@ -51,6 +51,10 @@ module Buildizer
       def instruction(instruction, cmd)
         instructions << [instruction.to_s.upcase, cmd].join(' ')
       end
+
+      def native_build_instructions(builder, target)
+        raise
+      end
     end # Base
   end # Image
 end # Buildizer

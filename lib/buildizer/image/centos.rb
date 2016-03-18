@@ -47,6 +47,24 @@ module Buildizer
 
         instruction :RUN, "bash -lec \"echo -e '#{repo}' >> /etc/yum.repos.d/CentOS-Extra-Buildizer.repo\""
       end
+
+      def native_build_instructions(builder, target)
+        source_name = "#{target.package_name}-#{target.package_version}"
+        source_archive_path = Pathname.new('/package.tar.gz')
+        target_spec_name = "#{target.package_name}.spec"
+
+        ["cp -r #{builder.docker.container_package_path} /tmp/#{source_name}",
+         "cd /tmp",
+         "tar -zcvf #{source_archive_path} #{source_name}",
+         "ln -fs #{builder.docker.container_build_path} ~/rpmbuild",
+         "rpmdev-setuptree",
+         "cp #{source_archive_path} ~/rpmbuild/SOURCES",
+         "cp #{builder.docker.container_package_path.join(target_spec_name)} ~/rpmbuild/SPECS",
+         "cd ~/rpmbuild/SPECS",
+         "rpmbuild -ba #{target_spec_name}",
+         "cp $(find #{builder.docker.container_build_path.join('RPMS')} -name '*.rpm') #{builder.docker.container_build_path}",
+        ]
+      end
     end # Centos
   end # Image
 end # Buildizer

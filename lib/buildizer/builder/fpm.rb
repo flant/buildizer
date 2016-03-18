@@ -22,7 +22,7 @@ module Buildizer
                   "build type is forbidden ",
                   "(use TRAVIS_TAG, CI_BUILD_TAG env variables)",
                 ].join) if params[:package_version]
-          params[:package_version] = ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
+          params[:package_version] = packager.package_version_tag
           params[:fpm_script] = Array(packager.buildizer_conf['fpm_script'])
           params[:fpm_config_files] = packager.buildizer_conf['fpm_config_files'].to_h
           params[:fpm_files] = packager.buildizer_conf['fpm_files'].to_h

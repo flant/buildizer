@@ -20,6 +20,10 @@ module Buildizer
         os_codename
       end
 
+      def build_dep(build_dep)
+        instruction :RUN, "apt-get build-dep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
+      end
+
       def fpm_output_type
         'deb'
       end
@@ -29,10 +33,6 @@ module Buildizer
           res << '--deb-use-file-permissions'
           res << '--deb-no-default-config-files'
         end
-      end
-
-      def build_dep(build_dep)
-        instruction :RUN, "apt-get build-dep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
       end
     end # Ubuntu
   end # Image
