@@ -143,6 +143,7 @@ module Buildizer
         docker.image_runtime_build_path(target.image).mkpath
 
         cmd = [
+          "rm -rf /package/build/*",
           "cd /package",
           *target.before_build,
           *Array(build_instructions(target)),
@@ -164,8 +165,8 @@ module Buildizer
                              "package_cloud push #{target.package_cloud_path} #{p}",
                              p.basename]}
                   .each {|yank, push, package|
-                    packager.command yank, desc: "Package cloud yank package '#{package}'"
-                    packager.command! push, desc: "Package cloud push package '#{package}'"
+                    packager.command yank, desc: "Package cloud yank package '#{package}' of target '#{target.name}'"
+                    packager.command! push, desc: "Package cloud push package '#{package}' of target '#{target.name}'"
                   }
       end
     end # Base
