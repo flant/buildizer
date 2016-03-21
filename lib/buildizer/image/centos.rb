@@ -63,8 +63,8 @@ module Buildizer
          "cp #{builder.docker.container_package_path.join(target_spec_name)} ~/rpmbuild/SPECS",
          "cd ~/rpmbuild/SPECS",
          "rpmbuild -ba #{target_spec_name}",
-         "cp $(find #{builder.docker.container_build_path.join('RPMS')} -name '*.rpm') #{builder.docker.container_build_path}",
-        ]
+         ["cp $(find #{builder.docker.container_build_path.join('RPMS')} -name '*.rpm') ",
+          "#{builder.docker.container_build_path}"].join]
       end
     end # Centos
   end # Image

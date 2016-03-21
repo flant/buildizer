@@ -34,6 +34,20 @@ module Buildizer
           res << '--deb-no-default-config-files'
         end
       end
+
+      def native_build_instructions(builder, target)
+        version, release = target.package_version.split('-')
+        source_name = "#{target.package_name}-#{version}"
+        source_archive_name = "#{target.package_name}_#{version}.orig.tar.gz"
+
+        ["cp -r #{builder.docker.container_package_path} /tmp/#{source_name}",
+         "cd /tmp",
+         "tar -zcvf #{builder.docker.container_build_path.join(source_archive_name)} #{source_name}",
+         "cd #{builder.docker.container_build_path}",
+         "tar xf #{builder.docker.container_build_path.join(source_archive_name)}",
+         "cd #{source_name}",
+         "dpkg-buildpackage -us -uc"]
+      end
     end # Ubuntu
   end # Image
 end # Buildizer
