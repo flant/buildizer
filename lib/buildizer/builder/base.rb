@@ -28,9 +28,6 @@ module Buildizer
         raise
       end
 
-      def prepare_image_instructions(target)
-      end
-
       def build_instructions(target)
       end
 
@@ -126,10 +123,7 @@ module Buildizer
 
       def prepare_target_image(target)
         docker.image_build_path(target.image).mkpath
-
-        (Array(prepare_image_instructions(target)) + target.prepare).each do |cmd|
-          target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")
-        end
+        target.prepare.each {|cmd| target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")}
         target.image.build_dep(Array(build_dep).to_set + target.build_dep)
         docker.build_image! target.image
       end
