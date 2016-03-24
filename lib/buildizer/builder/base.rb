@@ -8,9 +8,8 @@ module Buildizer
       def initialize(packager)
         @packager = packager
 
-        @build_path = Pathname.new(ENV['PREFIX'] || packager.package_path.join('build')).expand_path
-        raise Error, message: "bad build prefix: '#{build_path}' is a file" if build_path.file?
-        build_path.mkdir rescue nil
+        @build_path = packager.work_path.join('build').expand_path
+        build_path.mkpath
 
         @docker = Docker.new(self,
           username: packager.docker_username,
@@ -122,10 +121,10 @@ module Buildizer
       end
 
       def prepare_target_image(target)
-        docker.image_build_path(target.image).mkpath
+        target.image_build_path.mkpath
         target.prepare.each {|cmd| target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")}
         target.image.build_dep(Array(build_dep).to_set + target.build_dep)
-        docker.build_image! target.image
+        docker.build_image! target
       end
 
       def build
@@ -134,16 +133,16 @@ module Buildizer
       end
 
       def build_target(target)
-        docker.image_runtime_build_path(target.image).mkpath
+        target.image_runtime_build_path.mkpath
 
         cmd = [
-          "rm -rf /package/build/*",
+          "rm -rf #{docker.container_build_path.join('*')}",
           "cd /package",
           *target.before_build,
           *Array(build_instructions(target)),
         ]
 
-        docker.run! target.image, cmd: cmd
+        docker.run_in_image! target, cmd: cmd
       end
 
       def deploy
@@ -152,16 +151,17 @@ module Buildizer
       end
 
       def deploy_target(target)
-        cmd = Dir[docker.image_runtime_build_path(target.image)
-                        .join("*.#{target.image.fpm_output_type}")]
-                  .map {|p| Pathname.new(p)}
-                  .map {|p| ["package_cloud yank #{target.package_cloud_path} #{p.basename}",
-                             "package_cloud push #{target.package_cloud_path} #{p}",
-                             p.basename]}
-                  .each {|yank, push, package|
-                    packager.command yank, desc: "Package cloud yank package '#{package}' of target '#{target.name}'"
-                    packager.command! push, desc: "Package cloud push package '#{package}' of target '#{target.name}'"
-                  }
+        cmd = Dir[target.image_runtime_build_path.join("*.#{target.image.fpm_output_type}")]
+                .map {|p| Pathname.new(p)}
+                .map {|p| ["package_cloud yank #{target.package_cloud_path} #{p.basename}",
+                           "package_cloud push #{target.package_cloud_path} #{p}",
+                           p.basename]}
+                .each {|yank, push, package|
+                  packager.command yank, desc: ["Package cloud yank package '#{package}'",
+                                                " of target '#{target.name}'"].join
+                  packager.command! push, desc: ["Package cloud push package '#{package}'",
+                                                 " of target '#{target.name}'"].join
+                }
       end
     end # Base
   end # Builder

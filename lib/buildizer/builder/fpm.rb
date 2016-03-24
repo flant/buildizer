@@ -96,9 +96,8 @@ module Buildizer
               message: "unknown fpm_script event #{_when.inspect}"
             ) unless FPM_SCRIPT_EVENTS.include? _when
             res[_when] ||= {fpm_option: "--#{_when.split('_').join('-')}",
-                            file: docker.image_runtime_build_path(target.image)
-                                        .join("fpm_#{_when}.sh"),
-                            container_file: Pathname.new('/package/build').join("fpm_#{_when}.sh"),
+                            file: target.image_runtime_build_path.join("fpm_#{_when}.sh"),
+                            container_file: docker.container_build_path.join("fpm_#{_when}.sh"),
                             cmd: []}
             res[_when][:cmd] += cmd
           end

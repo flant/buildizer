@@ -4,6 +4,7 @@ module Buildizer
     attr_reader :buildizer_conf_path
     attr_reader :options_path
     attr_reader :travis_path
+    attr_reader :work_path
     attr_reader :debug
 
     def initialize(options: {}, debug: false)
@@ -11,6 +12,7 @@ module Buildizer
       @buildizer_conf_path = package_path.join('Buildizer')
       @options_path = package_path.join('.buildizer.yml')
       @travis_path = package_path.join('.travis.yml')
+      @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '/var/buildizer').expand_path
       @_options = options
       @debug = debug
     end

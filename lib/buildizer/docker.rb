@@ -54,21 +54,14 @@ module Buildizer
       builder.packager.command! "docker push #{image.name}", desc: "Docker push #{image.name}"
     end
 
-    def build_image!(image)
-      pull_image! image
+    def build_image!(target)
+      pull_image! target.image
 
-      image_build_path(image).join('Dockerfile').write [*image.instructions, nil].join("\n")
-      builder.packager.command! "docker build -t #{image.name} #{image_build_path(image)}", desc: "Docker build image #{image.name}"
+      target.image_build_path.join('Dockerfile').write [*target.image.instructions, nil].join("\n")
+      builder.packager.command! "docker build -t #{target.image.name} #{target.image_build_path}",
+                                desc: "Docker build image #{target.image.name}"
 
-      push_image! image
-    end
-
-    def image_build_path(image)
-      builder.build_path.join(image.os_name).join(image.os_version)
-    end
-
-    def image_runtime_build_path(image)
-      image_build_path(image).join('build')
+      push_image! target.image
     end
 
     def container_package_path
@@ -79,17 +72,17 @@ module Buildizer
       container_package_path.join('build')
     end
 
-    def run!(image, cmd:, env: {})
+    def run_in_image!(target, cmd:, env: {})
       cmd = Array(cmd)
 
       builder.packager.command! [
         "docker run --rm",
         *env.map {|k,v| "-e #{k}=#{v}"},
         "-v #{builder.packager.package_path}:#{container_package_path}",
-        "-v #{image_runtime_build_path(image)}:#{container_build_path}",
-        image.name,
+        "-v #{target.image_runtime_build_path}:#{container_build_path}",
+        target.image.name,
         "'#{cmd.join('; ')}'"
-      ].join(' '), desc: "Run build in docker image #{image.name}"
+      ].join(' '), desc: "Run build in docker image #{target.image.name}"
     end
   end # Docker
 end # Buildizer

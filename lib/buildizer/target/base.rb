@@ -34,6 +34,14 @@ module Buildizer
       def package_cloud_path
         "#{package_cloud}/#{image.os_package_cloud_name}/#{image.os_package_cloud_version}"
       end
+
+      def image_build_path
+        builder.build_path.join(name)
+      end
+
+      def image_runtime_build_path
+        image_build_path.join('build')
+      end
     end # Base
   end # Target
 end # Buildizer
