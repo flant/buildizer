@@ -49,19 +49,12 @@ module Buildizer
       end
 
       def native_build_instructions(builder, target)
-        version, release = target.package_version.split('-')
-        source_name = "#{target.package_name}-#{version}"
-        source_archive_path = Pathname.new('/package.tar.gz')
         target_spec_name = "#{target.package_name}.spec"
-
-        ["cp -r #{builder.docker.container_package_path} /tmp/#{source_name}",
-         "cd /tmp",
-         "tar -zcvf #{source_archive_path} #{source_name}",
-         "ln -fs #{builder.docker.container_build_path} ~/rpmbuild",
+        ["ln -fs #{builder.docker.container_build_path} ~/rpmbuild",
          "rpmdev-setuptree",
-         "cp #{source_archive_path} ~/rpmbuild/SOURCES",
-         "cp #{builder.docker.container_package_path.join(target_spec_name)} ~/rpmbuild/SPECS",
-         "cd ~/rpmbuild/SPECS",
+         "cp #{builder.docker.container_package_archive_path} ~/rpmbuild/SOURCES/",
+         "cp #{builder.docker.container_package_path.join(target_spec_name)} ~/rpmbuild/SPECS/",
+         "cd ~/rpmbuild/SPECS/",
          "rpmbuild -ba #{target_spec_name}",
          ["cp $(find #{builder.docker.container_build_path.join('RPMS')} -name '*.rpm') ",
           "#{builder.docker.container_build_path}"].join]

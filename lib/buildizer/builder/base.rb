@@ -132,12 +132,23 @@ module Buildizer
         targets.each {|target| build_target(target)}
       end
 
+      def prepare_package_source_instructions(target)
+        ["cp -r #{docker.container_package_mount_path} #{target.container_package_path}",
+         "rm -rf #{target.container_package_path.join('.git')}",
+         "cd #{target.container_package_path.dirname}",
+         ["tar -zcvf #{target.container_package_archive_path} ",
+          "#{target.container_package_path.basename}"].join,
+         "ln -fs #{target.container_package_path} #{docker.container_package_path}",
+         "ln -fs #{target.container_package_archive_path} #{docker.container_package_archive_path}"]
+      end
+
       def build_target(target)
         target.image_runtime_build_path.mkpath
 
         cmd = [
+          *Array(prepare_package_source_instructions(target)),
           "rm -rf #{docker.container_build_path.join('*')}",
-          "cd /package",
+          "cd #{docker.container_package_path}",
           *target.before_build,
           *Array(build_instructions(target)),
         ]

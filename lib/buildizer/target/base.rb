@@ -36,11 +36,35 @@ module Buildizer
       end
 
       def image_build_path
-        builder.build_path.join(name)
+        builder.build_path.join(package_name).join(package_version).join(name)
       end
 
       def image_runtime_build_path
         image_build_path.join('build')
+      end
+
+      def package_upstream_version
+        package_version.split('-')[0]
+      end
+
+      def package_release
+        package_version.split('-')[1]
+      end
+
+      def package_upstream_source_name
+        "#{package_name}-#{package_upstream_version}"
+      end
+
+      def package_upstream_source_archive_name
+        "#{package_upstream_source_name}.tar.gz"
+      end
+
+      def container_package_path
+        Pathname.new('/').join(package_upstream_source_name)
+      end
+
+      def container_package_archive_path
+        Pathname.new('/').join(package_upstream_source_archive_name)
       end
     end # Base
   end # Target

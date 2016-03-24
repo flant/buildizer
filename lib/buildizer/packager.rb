@@ -12,7 +12,7 @@ module Buildizer
       @buildizer_conf_path = package_path.join('Buildizer')
       @options_path = package_path.join('.buildizer.yml')
       @travis_path = package_path.join('.travis.yml')
-      @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '/var/buildizer').expand_path
+      @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
       @_options = options
       @debug = debug
     end

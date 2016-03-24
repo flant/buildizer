@@ -68,8 +68,16 @@ module Buildizer
       Pathname.new('/package')
     end
 
+    def container_package_archive_path
+      Pathname.new('/package.tar.gz')
+    end
+
+    def container_package_mount_path
+      Pathname.new('/.package')
+    end
+
     def container_build_path
-      container_package_path.join('build')
+      Pathname.new('/build')
     end
 
     def run_in_image!(target, cmd:, env: {})
@@ -78,7 +86,7 @@ module Buildizer
       builder.packager.command! [
         "docker run --rm",
         *env.map {|k,v| "-e #{k}=#{v}"},
-        "-v #{builder.packager.package_path}:#{container_package_path}",
+        "-v #{builder.packager.package_path}:#{container_package_mount_path}:ro",
         "-v #{target.image_runtime_build_path}:#{container_build_path}",
         target.image.name,
         "'#{cmd.join('; ')}'"

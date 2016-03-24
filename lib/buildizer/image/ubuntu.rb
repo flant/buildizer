@@ -36,17 +36,14 @@ module Buildizer
       end
 
       def native_build_instructions(builder, target)
-        version, release = target.package_version.split('-')
-        source_name = "#{target.package_name}-#{version}"
-        source_archive_name = "#{target.package_name}_#{version}.orig.tar.gz"
+        source_archive_name = "#{target.package_name}_#{target.package_upstream_version}.orig.tar.gz"
 
-        ["cp -r #{builder.docker.container_package_path} /tmp/#{source_name}",
-         "cd /tmp",
-         "tar -zcvf #{builder.docker.container_build_path.join(source_archive_name)} #{source_name}",
-         "cd #{builder.docker.container_build_path}",
-         "tar xf #{builder.docker.container_build_path.join(source_archive_name)}",
-         "cd #{source_name}",
-         "dpkg-buildpackage -us -uc"]
+        [["ln -fs #{target.container_package_archive_path} ",
+          "#{target.container_package_path.dirname.join(source_archive_name)}"].join,
+         "cd #{target.container_package_path}",
+         "dpkg-buildpackage -us -uc",
+         ["cp #{target.container_package_path.dirname.join('*.deb')} ",
+          "#{builder.docker.container_build_path}"].join]
       end
     end # Ubuntu
   end # Image
