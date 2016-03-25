@@ -25,6 +25,10 @@ module Buildizer
         @prepare = prepare
         @build_dep = build_dep
         @before_build = before_build
+
+        image_work_path.mkpath
+        image_build_path.mkpath
+        image_extra_path.mkpath
       end
 
       def docker_image
@@ -35,12 +39,16 @@ module Buildizer
         "#{package_cloud}/#{image.os_package_cloud_name}/#{image.os_package_cloud_version}"
       end
 
-      def image_build_path
-        builder.build_path.join(package_name).join(package_version).join(name)
+      def image_work_path
+        builder.work_path.join(package_name).join(package_version).join(name)
       end
 
-      def image_runtime_build_path
-        image_build_path.join('build')
+      def image_build_path
+        image_work_path.join('build')
+      end
+
+      def image_extra_path
+        image_work_path.join('extra')
       end
 
       def package_upstream_version

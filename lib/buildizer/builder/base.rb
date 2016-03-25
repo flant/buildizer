@@ -2,14 +2,14 @@ module Buildizer
   module Builder
     class Base
       attr_reader :packager
-      attr_reader :build_path
+      attr_reader :work_path
       attr_reader :docker
 
       def initialize(packager)
         @packager = packager
 
-        @build_path = packager.work_path.join('build').expand_path
-        build_path.mkpath
+        @work_path = packager.work_path.join('builder').expand_path
+        work_path.mkpath
 
         @docker = Docker.new(self,
           username: packager.docker_username,
@@ -121,7 +121,6 @@ module Buildizer
       end
 
       def prepare_target_image(target)
-        target.image_build_path.mkpath
         target.prepare.each {|cmd| target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")}
         target.image.build_dep(Array(build_dep).to_set + target.build_dep)
         docker.build_image! target
@@ -143,8 +142,6 @@ module Buildizer
       end
 
       def build_target(target)
-        target.image_runtime_build_path.mkpath
-
         cmd = [
           *Array(prepare_package_source_instructions(target)),
           "rm -rf #{docker.container_build_path.join('*')}",
@@ -162,7 +159,7 @@ module Buildizer
       end
 
       def deploy_target(target)
-        cmd = Dir[target.image_runtime_build_path.join("*.#{target.image.fpm_output_type}")]
+        cmd = Dir[target.image_build_path.join("*.#{target.image.fpm_output_type}")]
                 .map {|p| Pathname.new(p)}
                 .map {|p| ["package_cloud yank #{target.package_cloud_path} #{p.basename}",
                            "package_cloud push #{target.package_cloud_path} #{p}",
