@@ -88,7 +88,7 @@ module Buildizer
       cmd = Array(cmd)
 
       builder.packager.command! [
-        "docker run --rm",
+        "docker run",
         *env.map {|k,v| "-e #{k}=#{v}"},
         "-v #{builder.packager.package_path}:#{container_package_mount_path}:ro",
         "-v #{target.image_extra_path}:#{container_extra_path}:ro",
