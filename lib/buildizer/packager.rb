@@ -157,6 +157,10 @@ git add -v .travis.yml
       buildizer_conf['package_version']
     end
 
+    def package_version_tag_required?
+      ['1', 'true', 'yes'].include? ENV['BUILDIZER_REQUIRE_TAG'].to_s.downcase
+    end
+
     def package_version_tag
       ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
     end

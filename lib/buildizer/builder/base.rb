@@ -100,9 +100,20 @@ module Buildizer
 
       def check_params!(params)
         [:package_name, :package_version, :package_cloud].each do |param|
-          raise(Error,
-                error: :input_error,
-                message: "#{param} is not defined") unless params[param] and not params[param].empty?
+          unless params[param] and not params[param].empty?
+            raise Error, error: :input_error, message: "#{param} is not defined"
+          end
+        end
+
+        if packager.package_version_tag_required?
+          if not packager.package_version_tag
+            raise(Error, error: :input_error,
+                         message: "package_version_tag required (env TRAVIS_TAG or CI_BUILD_TAG)")
+          elsif packager.package_version_tag != params[:package_version]
+            raise(Error, error: :logical_error,
+                         message: "package_version and package_version_tag " +
+                                  "(env TRAVIS_TAG or CI_BUILD_TAG) should be the same")
+          end
         end
       end
 

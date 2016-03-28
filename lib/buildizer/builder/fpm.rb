@@ -15,14 +15,6 @@ module Buildizer
 
       def initial_target_params
         super.tap do |params|
-          raise(Error,
-                error: :input_error,
-                message: [
-                  "explicit definition of package_version in #{build_type} ",
-                  "build type is forbidden ",
-                  "(use TRAVIS_TAG, CI_BUILD_TAG env variables)",
-                ].join) if params[:package_version]
-          params[:package_version] = packager.package_version_tag
           params[:fpm_script] = Array(packager.buildizer_conf['fpm_script'])
           params[:fpm_config_files] = packager.buildizer_conf['fpm_config_files'].to_h
           params[:fpm_files] = packager.buildizer_conf['fpm_files'].to_h
