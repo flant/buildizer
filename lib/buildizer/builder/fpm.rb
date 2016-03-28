@@ -46,8 +46,8 @@ module Buildizer
       def do_merge_params(into, params)
         super.tap do |res|
           res[:fpm_script] = into[:fpm_script] + Array(params['fpm_script'])
-          res[:fpm_config_files] = into[:fpm_config_files].merge params['fpm_config_files'].to_h
-          res[:fpm_files] = into[:fpm_files].merge params['fpm_files'].to_h
+          res[:fpm_config_files] = into[:fpm_config_files].merge(params['fpm_config_files'].to_h)
+          res[:fpm_files] = into[:fpm_files].merge(params['fpm_files'].to_h)
           res[:fpm_conflicts] = into[:fpm_conflicts] + Array(params['fpm_conflicts'])
         end
       end
@@ -122,9 +122,10 @@ module Buildizer
          "--iteration=#{release}",
          *fpm_script.values.map {|desc| "#{desc[:fpm_option]}=#{desc[:container_file]}"},
          *Array(target.image.fpm_extra_params),
-         *target.fpm_config_files.values.map {|p| "--config-files=#{p}"},
+         *target.fpm_config_files.keys.map {|p| "--config-files=#{p}"},
+         *target.fpm_files.merge(target.fpm_config_files).map {|p1, p2| "#{p2}=#{p1}"},
          *target.fpm_conflicts.map{|pkg| "--conflicts=#{pkg}"},
-         *target.fpm_files.merge(target.fpm_config_files).map {|p1, p2| "#{p1}=#{p2}"}].join(' ')
+        ].join(' ')
       end
     end # Fpm
   end # Builder
