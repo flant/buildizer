@@ -104,22 +104,9 @@ module Buildizer
             raise Error, error: :input_error, message: "#{param} is not defined"
           end
         end
-
-        if packager.package_version_tag_required?
-          if not packager.package_version_tag
-            raise(Error, error: :input_error,
-                         message: "package_version_tag required (env TRAVIS_TAG or CI_BUILD_TAG)")
-          elsif packager.package_version_tag != params[:package_version]
-            raise(Error, error: :logical_error,
-                         message: "package_version and package_version_tag " +
-                                  "(env TRAVIS_TAG or CI_BUILD_TAG) should be the same")
-          end
-        end
       end
 
       def prepare
-        return unless packager.enabled?
-
         docker.login!
 
         begin
@@ -138,7 +125,6 @@ module Buildizer
       end
 
       def build
-        return unless packager.enabled?
         targets.each {|target| build_target(target)}
       end
 
@@ -165,8 +151,21 @@ module Buildizer
       end
 
       def deploy
-        return unless packager.enabled?
-        targets.each {|target| deploy_target(target)}
+        targets.map do |target|
+          target.tap do
+            if packager.package_version_tag_required_for_deploy? and
+               not packager.package_version_tag
+              raise(Error, error: :input_error,
+                           message: "package_version_tag required (env TRAVIS_TAG or CI_BUILD_TAG)")
+            elsif packager.package_version_tag_required_for_deploy? and
+                  packager.package_version_tag != target.package_version
+              raise(Error, error: :logical_error,
+                           message: "package_version and package_version_tag " +
+                                    "(env TRAVIS_TAG or CI_BUILD_TAG) should be the same " +
+                                    "for target '#{target.name}'")
+            end
+          end
+        end.each {|target| deploy_target(target)}
       end
 
       def deploy_target(target)
