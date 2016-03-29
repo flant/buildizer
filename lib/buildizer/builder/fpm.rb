@@ -114,9 +114,9 @@ module Buildizer
          "--iteration=#{release}",
          *fpm_script.values.map {|desc| "#{desc[:fpm_option]}=#{desc[:container_file]}"},
          *Array(target.image.fpm_extra_params),
+         *target.fpm_conflicts.map{|pkg| "--conflicts=#{pkg}"},
          *target.fpm_config_files.keys.map {|p| "--config-files=#{p}"},
          *target.fpm_files.merge(target.fpm_config_files).map {|p1, p2| "#{p2}=#{p1}"},
-         *target.fpm_conflicts.map{|pkg| "--conflicts=#{pkg}"},
         ].join(' ')
       end
     end # Fpm
