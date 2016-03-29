@@ -151,14 +151,16 @@ module Buildizer
       end
 
       def deploy
+        if packager.package_version_tag_required_for_deploy? and
+           not packager.package_version_tag
+          puts "package_version_tag (env TRAVIS_TAG or CI_BUILD_TAG) required: ignoring deploy"
+          return
+        end
+
         targets.map do |target|
           target.tap do
             if packager.package_version_tag_required_for_deploy? and
-               not packager.package_version_tag
-              raise(Error, error: :input_error,
-                           message: "package_version_tag required (env TRAVIS_TAG or CI_BUILD_TAG)")
-            elsif packager.package_version_tag_required_for_deploy? and
-                  packager.package_version_tag != target.package_version
+               packager.package_version_tag != target.package_version
               raise(Error, error: :logical_error,
                            message: "package_version and package_version_tag " +
                                     "(env TRAVIS_TAG or CI_BUILD_TAG) should be the same " +
