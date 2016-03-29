@@ -20,6 +20,7 @@ module Buildizer
           params[:fpm_files] = packager.buildizer_conf['fpm_files'].to_h
           params[:fpm_conflicts] = Array(packager.buildizer_conf['fpm_conflicts'])
           params[:fpm_depends] = Array(packager.buildizer_conf['fpm_depends'])
+          params[:fpm_description] = packager.buildizer_conf['fpm_description']
         end
       end
 
@@ -43,6 +44,7 @@ module Buildizer
           res[:fpm_files] = into[:fpm_files].merge(params['fpm_files'].to_h)
           res[:fpm_conflicts] = (into[:fpm_conflicts] + Array(params['fpm_conflicts'])).uniq
           res[:fpm_depends] = (into[:fpm_depends] + Array(params['fpm_depends'])).uniq
+          res[:fpm_description] = params['fpm_description'] || into[:fpm_description]
         end
       end
 
@@ -116,11 +118,12 @@ module Buildizer
          "--iteration=#{release}",
          *fpm_script.values.map {|desc| "#{desc[:fpm_option]}=#{desc[:container_file]}"},
          *Array(target.image.fpm_extra_params),
+         (target.fpm_description ? "--description='#{target.fpm_description}'" : nil),
          *target.fpm_conflicts.map{|pkg| "--conflicts=#{pkg}"},
          *target.fpm_depends.map{|pkg| "--depends=#{pkg}"},
          *target.fpm_config_files.keys.map {|p| "--config-files=#{p}"},
          *target.fpm_files.merge(target.fpm_config_files).map {|p1, p2| "#{p2}=#{p1}"},
-        ].join(' ')
+        ].compact.join(' ')
       end
     end # Fpm
   end # Builder
