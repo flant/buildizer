@@ -19,6 +19,8 @@ module Buildizer
           params[:fpm_config_files] = packager.buildizer_conf['fpm_config_files'].to_h
           params[:fpm_files] = packager.buildizer_conf['fpm_files'].to_h
           params[:fpm_conflicts] = Array(packager.buildizer_conf['fpm_conflicts'])
+          params[:fpm_replaces] = Array(packager.buildizer_conf['fpm_replaces'])
+          params[:fpm_provides] = Array(packager.buildizer_conf['fpm_provides'])
           params[:fpm_depends] = Array(packager.buildizer_conf['fpm_depends'])
           params[:fpm_description] = packager.buildizer_conf['fpm_description']
         end
@@ -43,6 +45,8 @@ module Buildizer
           res[:fpm_config_files] = into[:fpm_config_files].merge(params['fpm_config_files'].to_h)
           res[:fpm_files] = into[:fpm_files].merge(params['fpm_files'].to_h)
           res[:fpm_conflicts] = (into[:fpm_conflicts] + Array(params['fpm_conflicts'])).uniq
+          res[:fpm_replaces] = (into[:fpm_replaces] + Array(params['fpm_replaces'])).uniq
+          res[:fpm_provides] = (into[:fpm_provides] + Array(params['fpm_provides'])).uniq
           res[:fpm_depends] = (into[:fpm_depends] + Array(params['fpm_depends'])).uniq
           res[:fpm_description] = params['fpm_description'] || into[:fpm_description]
         end
@@ -120,6 +124,8 @@ module Buildizer
          *Array(target.image.fpm_extra_params),
          (target.fpm_description ? "--description='#{target.fpm_description}'" : nil),
          *target.fpm_conflicts.map{|pkg| "--conflicts=#{pkg}"},
+         *target.fpm_replaces.map{|pkg| "--replaces=#{pkg}"},
+         *target.fpm_provides.map{|pkg| "--provides=#{pkg}"},
          *target.fpm_depends.map{|pkg| "--depends=#{pkg}"},
          *target.fpm_config_files.keys.map {|p| "--config-files=#{p}"},
          *target.fpm_files.merge(target.fpm_config_files).map {|p1, p2| "#{p2}=#{p1}"},
