@@ -162,7 +162,8 @@ git add -v .travis.yml
     end
 
     def package_version_tag
-      ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
+      res = ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
+      if res.nil? then res elsif res.empty? then nil else res end
     end
 
     def os_params(os)

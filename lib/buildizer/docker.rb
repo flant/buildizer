@@ -19,6 +19,7 @@ module Buildizer
         'ubuntu' => {
           '12.04' => Image::Ubuntu1204,
           '14.04' => Image::Ubuntu1404,
+          '16.04' => Image::Ubuntu1604,
           nil => Image::Ubuntu1404,
         },
         'centos' => {
