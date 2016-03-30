@@ -9,6 +9,8 @@ module Buildizer
       attr_reader :fpm_provides
       attr_reader :fpm_depends
       attr_reader :fpm_description
+      attr_reader :fpm_maintainer
+      attr_reader :fpm_url
 
       def initialize(builder, image,
                      fpm_script: [], fpm_config_files: {}, fpm_files: {},
@@ -24,6 +26,8 @@ module Buildizer
         @fpm_provides = fpm_provides
         @fpm_depends = fpm_depends
         @fpm_description = fpm_description
+        @fpm_maintainer = fpm_maintainer
+        @fpm_url = fpm_url
       end
     end # Fpm
   end # Target
