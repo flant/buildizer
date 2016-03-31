@@ -45,10 +45,14 @@ module Buildizer
     def append_tag(tag, value)
     end
 
+    def append_patch(value)
+      append_patch_macro append_patch_tag(value)
+    end
+
     def patch_tags
       preamble_lines
-        .grep(_patch_line_regex)
-        .map(&method(:_patch_line_parse))
+        .grep(_patch_tag_line_regex)
+        .map(&method(:_patch_tag_line_parse))
         .to_h
     end
 
@@ -56,18 +60,20 @@ module Buildizer
       patch_num = nil
       make_line = proc do |insert_ind|
         if insert_ind > 0
-          last_patch_num = _patch_line_parse(preamble_lines[insert_ind - 1]).first
+          last_patch_num = _patch_tag_line_parse(preamble_lines[insert_ind - 1]).first
           patch_num = last_patch_num + 1
         else
           patch_num = 0
         end
         "Patch#{patch_num}: #{value}"
       end
-      _append_line(into: preamble_lines, value: make_line, after: _patch_line_regex)
+      _append_line(into: preamble_lines, value: make_line, after: _patch_tag_line_regex)
       patch_num
     end
 
-    def append_apply_patch(num)
+    def append_patch_macro(num)
+      _append_line(into: prep_lines, value: "%patch#{num} -p1", after: _patch_macro_line_regex)
+      nil
     end
 
     def sections
@@ -79,10 +85,14 @@ module Buildizer
     end
 
     SECTIONS.each do |section|
-      define_method("#{section}_lines") {(sections[section] || {}).values.flatten}
+      define_method("#{section}_lines") {|params=nil| (sections[section] || {})[params] || []}
     end
 
     protected
+
+    def _patch_macro_line_regex
+      @_patch_macro_line_regex ||= /^%patch[0-9]*/
+    end
 
     def _append_line(into:, value:, after: nil)
       find_index = proc do |lines|
@@ -114,13 +124,13 @@ module Buildizer
       end
     end
 
-    def _patch_line_parse(line)
+    def _patch_tag_line_parse(line)
       tag, value = line.split(': ', 2)
       [tag.split('Patch').last.to_i, value] if tag
     end
 
-    def _patch_line_regex
-      @_patch_line_regex ||= /Patch[0-9]*: /
+    def _patch_tag_line_regex
+      @_patch_tag_line_regex ||= /^Patch[0-9]*: /
     end
 
     def _load
