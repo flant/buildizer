@@ -30,11 +30,35 @@ module Buildizer
     end
 
     def version
-      find_tag(preamble_lines, :Version)
+      find_tag(:Version)
+    end
+
+    def version=(v)
+      _replace_line(lines: preamble_lines, new_line: "Version: #{v}", match: /Version: /)
     end
 
     def release
-      find_tag(preamble_lines, :Release)
+      find_tag(:Release).gsub('%{?dist}', '')
+    end
+
+    def release=(v)
+      _replace_line(lines: preamble_lines, new_line: "Release: #{v}%{?dist}", match: /Release: /)
+    end
+
+    def epoch
+      find_tag(:Epoch)
+    end
+
+    def epoch=(v)
+      _replace_line(lines: preamble_lines, new_line: "Epoch: #{v}", match: /Epoch: /)
+    end
+
+    def append_changelog(name:, email:, message:)
+      changelog_version = [epoch, [version, release].compact.join('-')].compact.join(':')
+      ["* #{Time.now.strftime("%a %b %e %Y")} #{name} <#{email}> - #{changelog_version}",
+        "- #{message}",
+        "",
+      ].reverse_each {|line| _prepend_line(lines: changelog_lines, new_line: line)}
     end
 
     def find_tag(tag)
@@ -43,6 +67,7 @@ module Buildizer
     end
 
     def append_tag(tag, value)
+      _append_line(lines: preamble_lines, new_line: "#{tag.to_s.capitalize}: #{value}")
     end
 
     def append_patch(value)
@@ -67,12 +92,12 @@ module Buildizer
         end
         "Patch#{patch_num}: #{value}"
       end
-      _append_line(into: preamble_lines, value: make_line, after: _patch_tag_line_regex)
+      _append_line(lines: preamble_lines, new_line: make_line, after: _patch_tag_line_regex)
       patch_num
     end
 
     def append_patch_macro(num)
-      _append_line(into: prep_lines, value: "%patch#{num} -p1", after: _patch_macro_line_regex)
+      _append_line(lines: prep_lines, new_line: "%patch#{num} -p1", after: _patch_macro_line_regex)
       nil
     end
 
@@ -94,7 +119,7 @@ module Buildizer
       @_patch_macro_line_regex ||= /^%patch[0-9]*/
     end
 
-    def _append_line(into:, value:, after: nil)
+    def _append_line(lines:, new_line:, after: nil)
       find_index = proc do |lines|
         if after
           ind = lines.rindex {|line| line.to_s =~ after}
@@ -103,10 +128,10 @@ module Buildizer
           -1
         end
       end
-      _insert_line(into: into, value: value, find_index: find_index)
+      _insert_line(lines: lines, new_line: new_line, find_index: find_index)
     end
 
-    def _prepend_line(into:, value:, before: nil)
+    def _prepend_line(lines:, new_line:, before: nil)
       find_index = proc do |lines|
         if before
           lines.index {|line| line.to_s =~ before} || 0
@@ -114,13 +139,20 @@ module Buildizer
           0
         end
       end
-      _insert_line(into: into, value: value, find_index: find_index)
+      _insert_line(lines: lines, new_line: new_line, find_index: find_index)
     end
 
-    def _insert_line(into:, value:, find_index:)
-      if ind = find_index.call(into)
-        line = (value.respond_to?(:call) ? value.call(ind) : value).to_s.chomp
-        into.insert(ind, line)
+    def _insert_line(lines:, new_line:, find_index:)
+      if ind = find_index.call(lines)
+        line = (new_line.respond_to?(:call) ? new_line.call(ind) : new_line).to_s.chomp
+        lines.insert(ind, line)
+      end
+    end
+
+    def _replace_line(lines:, new_line:, match:)
+      if ind = lines.index {|line| line.to_s =~ match}
+        line = (new_line.respond_to?(:call) ? new_line.call(ind) : new_line).to_s.chomp
+        lines[ind] = line
       end
     end
 
@@ -150,24 +182,3 @@ module Buildizer
     end
   end # Rpmspec
 end # Buildizer
-
-__END__
-rpmspec = Rpmspec.new('aaa')
-
-rpmspec.preamble_lines
-rpmspec.prep_lines
-rpmspec.build_lines
-rpmspec.install_lines
-rpmspec.check_lines
-rpmspec.files_lines
-rpmspec.clean_lines
-rpmspec.changelog_lines
-
-rpmspec.append_patch patch_path
-rpmspec.append_patch 'mypatch.path'
-rpmspec.release
-rpmspec.version
-rpmspec.release = "#{rpmspec.release}buildizer#{buildizer_release}"
-rpmspec.append_changelog name: 'Timofey Kirillov',
-                         email: 'timofey.kirillov@flant.com',
-                         messsage: 'Buildizer release'
