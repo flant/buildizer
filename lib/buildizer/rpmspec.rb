@@ -2,28 +2,19 @@ module Buildizer
   class Rpmspec
     SECTIONS = %i{prep build install clean check files changelog}
 
+    attr_reader :path
+
     def initialize(path)
       @path = Pathname.new(path).expand_path
       _load
     end
 
-    def sections
-      @sections ||= {}
-    end
-
-    def preamble_lines
-      @preamble_lines ||= []
-    end
-
-    SECTIONS.each do |section|
-      define_method("#{section}_lines") {(sections[section] || {}).values.flatten}
+    def reload
+      @sections = nil
     end
 
     def save!
-    end
-
-    def reload
-      @sections = nil
+      path.write dump
     end
 
     def dump
@@ -54,7 +45,7 @@ module Buildizer
     def append_tag(tag, value)
     end
 
-    def patches_tags
+    def patch_tags
       preamble_lines
         .grep(_patch_line_regex)
         .map(&method(:_patch_line_parse))
@@ -62,23 +53,70 @@ module Buildizer
     end
 
     def append_patch_tag(value)
-      i = preamble_lines
-        .reverse_each
-        .find_index {|line| line =~ _patch_line_regex}
-      if i
-        last_patch_i = preamble_lines.size - i - 1
-        last_patch = _patch_line_parse(preamble_lines[last_patch_i]).first
-        preamble_lines.insert(last_patch_i + 1, "Patch#{last_patch + 1}: #{value}")
-      else
-        preamble_lines << "Patch0: #{value}"
+      patch_num = nil
+      make_line = proc do |insert_ind|
+        if insert_ind > 0
+          last_patch_num = _patch_line_parse(preamble_lines[insert_ind - 1]).first
+          patch_num = last_patch_num + 1
+        else
+          patch_num = 0
+        end
+        "Patch#{patch_num}: #{value}"
       end
+      _append_line(into: preamble_lines, value: make_line, after: _patch_line_regex)
+      patch_num
+    end
+
+    def append_apply_patch(num)
+    end
+
+    def sections
+      @sections ||= {}
+    end
+
+    def preamble_lines
+      @preamble_lines ||= []
+    end
+
+    SECTIONS.each do |section|
+      define_method("#{section}_lines") {(sections[section] || {}).values.flatten}
     end
 
     protected
 
+    def _append_line(into:, value:, after: nil)
+      find_index = proc do |lines|
+        if after
+          ind = lines.rindex {|line| line.to_s =~ after}
+          ind ? ind + 1 : -1
+        else
+          -1
+        end
+      end
+      _insert_line(into: into, value: value, find_index: find_index)
+    end
+
+    def _prepend_line(into:, value:, before: nil)
+      find_index = proc do |lines|
+        if before
+          lines.index {|line| line.to_s =~ before} || 0
+        else
+          0
+        end
+      end
+      _insert_line(into: into, value: value, find_index: find_index)
+    end
+
+    def _insert_line(into:, value:, find_index:)
+      if ind = find_index.call(into)
+        line = (value.respond_to?(:call) ? value.call(ind) : value).to_s.chomp
+        into.insert(ind, line)
+      end
+    end
+
     def _patch_line_parse(line)
       tag, value = line.split(': ', 2)
-      [tag.split('Patch').last.to_i, value]
+      [tag.split('Patch').last.to_i, value] if tag
     end
 
     def _patch_line_regex
@@ -87,7 +125,7 @@ module Buildizer
 
     def _load
       current_section = preamble_lines
-      @path.readlines.each do |line|
+      path.readlines.each do |line|
         line.chomp!
         if section = SECTIONS.find {|s| line.start_with? "%#{s}"}
           section_params = line.split(' ')[1..-1]
