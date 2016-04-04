@@ -239,7 +239,8 @@ git add -v .travis.yml
         build_type = buildizer_conf['build_type']
         raise Error, error: :input_error, message: "no build_type given" unless build_type
         klass = {fpm: Builder::Fpm,
-                 native: Builder::Native}[build_type.to_s.to_sym]
+                 native: Builder::Native,
+                 patch: Builder::Patch}[build_type.to_s.to_sym]
         raise Error, error: :input_error, message: "unknown build_type '#{build_type}'" unless klass
         klass.new(self)
       end

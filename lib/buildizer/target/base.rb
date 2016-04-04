@@ -31,6 +31,10 @@ module Buildizer
         image_extra_path.mkpath
       end
 
+      def package_version
+        @package_version.nil? ? nil : @package_version.to_s
+      end
+
       def docker_image
         "#{builder.packager.docker_image || "buildizer/#{package_name}"}:#{name}"
       end

@@ -55,6 +55,10 @@ module Buildizer
       def native_build_instructions(builder, target)
         raise
       end
+
+      def patch_build_instructions(builder, target)
+        raise
+      end
     end # Base
   end # Image
 end # Buildizer

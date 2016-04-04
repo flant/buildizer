@@ -48,16 +48,47 @@ module Buildizer
         instruction :RUN, "bash -lec \"echo -e '#{repo}' >> /etc/yum.repos.d/CentOS-Extra-Buildizer.repo\""
       end
 
-      def native_build_instructions(builder, target)
-        target_spec_name = "#{target.package_name}.spec"
+      def target_spec_name(target)
+        "#{target.package_name.split('-').first}.spec"
+      end
+
+      def rpmdev_setuptree_instructions(builder, target)
         ["ln -fs #{builder.docker.container_build_path} ~/rpmbuild",
-         "rpmdev-setuptree",
-         "cp #{builder.docker.container_package_archive_path} ~/rpmbuild/SOURCES/",
-         "cp #{builder.docker.container_package_path.join(target_spec_name)} ~/rpmbuild/SPECS/",
-         "cd ~/rpmbuild/SPECS/",
-         "rpmbuild -ba #{target_spec_name}",
+         "rpmdev-setuptree"]
+      end
+
+      def build_rpm_instructions(builder, target)
+        ["cd ~/rpmbuild/SPECS/",
+         "rpmbuild -ba #{target_spec_name(target)} > /dev/null",
          ["cp $(find #{builder.docker.container_build_path.join('RPMS')} -name '*.rpm') ",
           "#{builder.docker.container_build_path}"].join]
+      end
+
+      def native_build_instructions(builder, target)
+        [*rpmdev_setuptree_instructions(builder, target),
+         "cp #{builder.docker.container_package_archive_path} ~/rpmbuild/SOURCES/",
+         "cp #{builder.docker.container_package_path.join(target_spec_name(target))} ~/rpmbuild/SPECS/",
+         *build_rpm_instructions(builder, target)]
+      end
+
+      def patch_build_instructions(builder, target)
+        rpmchange_cmd = "rpmchange %{cmd} --specfile ~/rpmbuild/SPECS/#{target_spec_name(target)} %{args}"
+        get_release_cmd = rpmchange_cmd % {cmd: :tag, args: "--name release"}
+        set_release_cmd = rpmchange_cmd % {cmd: :tag, args: "--name release --value %{value}"}
+        changelog_cmd = rpmchange_cmd % {
+          cmd: :changelog,
+          args: "--append --name \"%{name}\" --email \"%{email}\" --message \"%{message}\""
+        }
+
+        [*rpmdev_setuptree_instructions(builder, target),
+         "yumdownloader --source #{target.package_name}",
+         "rpm -i *.rpm",
+         "gem install rpmchange",
+         set_release_cmd % {value: "$(#{get_release_cmd})buildizer#{target.package_version}"},
+         *target.patch.map {|patch| "cp #{patch} ~/rpmbuild/SOURCES/"},
+         *target.patch.map {|patch| rpmchange_cmd % {cmd: :patch, args: "--name #{patch}"}},
+         changelog_cmd % {name: '', email: '', message: 'Patch by buildizer'},
+         *build_rpm_instructions(builder, target)]
       end
     end # Centos
   end # Image

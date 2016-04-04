@@ -100,7 +100,7 @@ module Buildizer
 
       def check_params!(params)
         [:package_name, :package_version, :package_cloud].each do |param|
-          unless params[param] and not params[param].empty?
+          unless params[param] and not params[param].to_s.empty?
             raise Error, error: :input_error, message: "#{param} is not defined"
           end
         end
