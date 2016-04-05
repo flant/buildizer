@@ -49,19 +49,18 @@ module Buildizer
       end
 
       def target_spec_name(target)
-        "#{target.package_name.split('-').first}.spec"
+        "#{target.base_package_name}.spec"
       end
 
       def rpmdev_setuptree_instructions(builder, target)
-        ["ln -fs #{builder.docker.container_build_path} ~/rpmbuild",
-         "rpmdev-setuptree"]
+        ["rpmdev-setuptree",
+         "rmdir ~/rpmbuild/RPMS",
+         "ln -fs #{builder.docker.container_build_path} ~/rpmbuild/RPMS"]
       end
 
       def build_rpm_instructions(builder, target)
         ["cd ~/rpmbuild/SPECS/",
-         "rpmbuild -ba #{target_spec_name(target)} > /dev/null",
-         ["cp $(find #{builder.docker.container_build_path.join('RPMS')} -name '*.rpm') ",
-          "#{builder.docker.container_build_path}"].join]
+         "rpmbuild -ba #{target_spec_name(target)} > /dev/null"]
       end
 
       def native_build_instructions(builder, target)
@@ -80,14 +79,17 @@ module Buildizer
           args: "--append --name \"%{name}\" --email \"%{email}\" --message \"%{message}\""
         }
 
-        [*rpmdev_setuptree_instructions(builder, target),
+        ["yum-builddep -y #{target.base_package_name}",
+         *rpmdev_setuptree_instructions(builder, target),
          "yumdownloader --source #{target.package_name}",
          "rpm -i *.rpm",
          "gem install rpmchange",
          set_release_cmd % {value: "$(#{get_release_cmd})buildizer#{target.package_version}"},
          *target.patch.map {|patch| "cp #{patch} ~/rpmbuild/SOURCES/"},
-         *target.patch.map {|patch| rpmchange_cmd % {cmd: :patch, args: "--name #{patch}"}},
-         changelog_cmd % {name: '', email: '', message: 'Patch by buildizer'},
+         *target.patch.map {|patch|
+           rpmchange_cmd % {cmd: :append, args: "--section prep --value \"patch -p1 < %{_sourcedir}/#{patch}\""}
+         },
+         changelog_cmd % {name: '', email: '', message: 'Patch by buildizer'}, # TODO: name (maintainer), email (maintainer_email)
          *build_rpm_instructions(builder, target)]
       end
     end # Centos

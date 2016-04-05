@@ -35,6 +35,10 @@ module Buildizer
         @package_version.nil? ? nil : @package_version.to_s
       end
 
+      def base_package_name
+        package_name.split('-').first
+      end
+
       def docker_image
         "#{builder.packager.docker_image || "buildizer/#{package_name}"}:#{name}"
       end
