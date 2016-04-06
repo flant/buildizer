@@ -45,6 +45,9 @@ module Buildizer
          ["cp #{target.container_package_path.dirname.join('*.deb')} ",
           "#{builder.docker.container_build_path}"].join]
       end
+
+      def patch_build_instructions(builder, target)
+      end
     end # Ubuntu
   end # Image
 end # Buildizer

@@ -53,21 +53,21 @@ module Buildizer
       end
 
       def rpmdev_setuptree_instructions(builder, target)
-        ["rpmdev-setuptree",
-         "rmdir ~/rpmbuild/RPMS",
-         "ln -fs #{builder.docker.container_build_path} ~/rpmbuild/RPMS"]
+        "rpmdev-setuptree"
       end
 
       def build_rpm_instructions(builder, target)
         ["cd ~/rpmbuild/SPECS/",
-         "rpmbuild -ba #{target_spec_name(target)} > /dev/null"]
+         "rpmbuild -bb #{target_spec_name(target)} > /dev/null",
+         ["find ~/rpmbuild/RPMS -name '*.rpm' ",
+          "-exec mv {} #{builder.docker.container_build_path} \\;"].join]
       end
 
       def native_build_instructions(builder, target)
-        [*rpmdev_setuptree_instructions(builder, target),
+        [*Array(rpmdev_setuptree_instructions(builder, target)),
          "cp #{builder.docker.container_package_archive_path} ~/rpmbuild/SOURCES/",
          "cp #{builder.docker.container_package_path.join(target_spec_name(target))} ~/rpmbuild/SPECS/",
-         *build_rpm_instructions(builder, target)]
+         *Array(build_rpm_instructions(builder, target))]
       end
 
       def patch_build_instructions(builder, target)
@@ -80,7 +80,7 @@ module Buildizer
         }
 
         ["yum-builddep -y #{target.base_package_name}",
-         *rpmdev_setuptree_instructions(builder, target),
+         *Array(rpmdev_setuptree_instructions(builder, target)),
          "yumdownloader --source #{target.package_name}",
          "rpm -i *.rpm",
          "gem install rpmchange",
@@ -90,7 +90,7 @@ module Buildizer
            rpmchange_cmd % {cmd: :append, args: "--section prep --value \"patch -p1 < %{_sourcedir}/#{patch}\""}
          },
          changelog_cmd % {name: '', email: '', message: 'Patch by buildizer'}, # TODO: name (maintainer), email (maintainer_email)
-         *build_rpm_instructions(builder, target)]
+         *Array(build_rpm_instructions(builder, target))]
       end
     end # Centos
   end # Image
