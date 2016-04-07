@@ -58,7 +58,7 @@ module Buildizer
 
       def build_rpm_instructions(builder, target)
         ["cd ~/rpmbuild/SPECS/",
-         "rpmbuild -bb #{target_spec_name(target)} > /dev/null",
+         "rpmbuild -bb #{target_spec_name(target)}",
          ["find ~/rpmbuild/RPMS -name '*.rpm' ",
           "-exec mv {} #{builder.docker.container_build_path} \\;"].join]
       end

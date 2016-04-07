@@ -36,7 +36,7 @@ module Buildizer
       end
 
       def build_deb_instructions(builder, target)
-        ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{builder.build_jobs} > /dev/null",
+        ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{builder.build_jobs}",
          "cp ../*.deb #{builder.docker.container_build_path}"]
       end
 
@@ -53,7 +53,7 @@ module Buildizer
         ["apt-get source #{target_package_spec(target)}",
          'cd $(ls *.orig.tar* | ruby -ne "puts \$_.split(\\".orig.tar\\").first.gsub(\\"_\\", \\"-\\")")',
          ["DEBFULLNAME="" DEBEMAIL="" debchange --newversion ",
-          "$(dpkg-parsechangelog | grep \"Version:\" | cut -d\" \" -f2-)buildizer3 ",
+          "$(dpkg-parsechangelog | grep \"Version:\" | cut -d\" \" -f2-)buildizer#{target.patch_version} ",
           "--distribution #{os_codename} \"Patch by buildizer\""].join,
          *target.patch.map {|patch| "cp ../#{patch} debian/patches/"},
          *target.patch.map {|patch| "sed -i \"/#{Regexp.escape(patch)}/d\" debian/patches/series"},

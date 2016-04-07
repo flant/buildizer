@@ -95,7 +95,7 @@ module Buildizer
         "-v #{target.image_extra_path}:#{container_extra_path}:ro",
         "-v #{target.image_build_path}:#{container_build_path}",
         target.image.name,
-        "'#{cmd.join('; ')}'"
+        "'#{['set -e', *cmd].join('; ')}'"
       ].join(' '), desc: "Run build in docker image #{target.image.name}"
     end
   end # Docker
