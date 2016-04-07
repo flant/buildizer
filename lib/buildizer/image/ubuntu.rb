@@ -36,7 +36,7 @@ module Buildizer
       end
 
       def build_deb_instructions(builder, target)
-        ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{builder.build_jobs}",
+        ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{builder.build_jobs} > /dev/null",
          "cp ../*.deb #{builder.docker.container_build_path}"]
       end
 
