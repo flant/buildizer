@@ -11,10 +11,13 @@ module Buildizer
       attr_reader :prepare
       attr_reader :build_dep
       attr_reader :before_build
+      attr_reader :maintainer
+      attr_reader :maintainer_email
 
       def initialize(builder, image,
                      name:, package_name:, package_version:, package_cloud:,
-                     prepare: [], build_dep: [], before_build: [])
+                     prepare: [], build_dep: [], before_build: [],
+                     maintainer: nil, maintainer_email: nil, &blk)
         @builder = builder
         @image = image
 
@@ -25,10 +28,26 @@ module Buildizer
         @prepare = prepare
         @build_dep = build_dep
         @before_build = before_build
+        @maintainer = maintainer
+        @maintainer_email = maintainer_email
+
+        yield if block_given?
 
         image_work_path.mkpath
         image_build_path.mkpath
         image_extra_path.mkpath
+      end
+
+      def image_work_path
+        raise
+      end
+
+      def container_package_name
+        raise
+      end
+
+      def package_version_tag_param_name
+        raise
       end
 
       def package_version
@@ -39,16 +58,20 @@ module Buildizer
         package_name.split('-').first
       end
 
+      def docker_image_repository
+        "#{builder.packager.docker_image || "buildizer/#{package_name}"}"
+      end
+
+      def docker_image_tag
+        name.gsub('/', '__')
+      end
+
       def docker_image
-        "#{builder.packager.docker_image || "buildizer/#{package_name}"}:#{name}"
+        "#{docker_image_repository}:#{docker_image_tag}"
       end
 
       def package_cloud_path
         "#{package_cloud}/#{image.os_package_cloud_name}/#{image.os_package_cloud_version}"
-      end
-
-      def image_work_path
-        builder.work_path.join(package_name).join(package_version).join(name)
       end
 
       def image_build_path
@@ -59,28 +82,20 @@ module Buildizer
         image_work_path.join('extra')
       end
 
-      def package_upstream_version
-        package_version.split('-')[0]
+      def package_version_tag
+        send(package_version_tag_param_name)
       end
 
-      def package_release
-        package_version.split('-')[1]
-      end
-
-      def package_upstream_source_name
-        "#{package_name}-#{package_upstream_version}"
-      end
-
-      def package_upstream_source_archive_name
-        "#{package_upstream_source_name}.tar.gz"
+      def container_package_archive_name
+        "#{container_package_name}.tar.gz"
       end
 
       def container_package_path
-        Pathname.new('/').join(package_upstream_source_name)
+        Pathname.new('/').join(container_package_name)
       end
 
       def container_package_archive_path
-        Pathname.new('/').join(package_upstream_source_archive_name)
+        Pathname.new('/').join(container_package_archive_name)
       end
     end # Base
   end # Target

@@ -35,18 +35,31 @@ module Buildizer
         end
       end
 
+      def build_deb_instructions(builder, target)
+        ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{builder.build_jobs}",
+         "cp ../*.deb #{builder.docker.container_build_path}"]
+      end
+
       def native_build_instructions(builder, target)
         source_archive_name = "#{target.package_name}_#{target.package_upstream_version}.orig.tar.gz"
 
         [["ln -fs #{target.container_package_archive_path} ",
           "#{target.container_package_path.dirname.join(source_archive_name)}"].join,
          "cd #{target.container_package_path}",
-         "dpkg-buildpackage -us -uc",
-         ["cp #{target.container_package_path.dirname.join('*.deb')} ",
-          "#{builder.docker.container_build_path}"].join]
+         *Array(build_deb_instructions(builder, target))]
       end
 
       def patch_build_instructions(builder, target)
+        ["apt-get build-dep -y #{target.package_name}",
+         "apt-get source #{target.package_name}#{target.package_version ? "=#{taarget.package_version}" : nil}",
+         'cd $(ls *.orig.tar.gz | ruby -ne "puts \$_.split(\\".orig.tar.gz\\").first.gsub(\\"_\\", \\"-\\")")',
+         ["DEBFULLNAME="" DEBEMAIL="" debchange --newversion ",
+          "$(dpkg-parsechangelog | grep \"Version:\" | cut -d\" \" -f2-)buildizer3 ",
+          "--distribution #{os_codename} \"Patch by buildizer\""].join,
+         *target.patch.map {|patch| "cp ../#{patch} debian/patches/"},
+         *target.patch.map {|patch| "sed -i \"/#{Regexp.escape(patch)}/d\" debian/patches/series"},
+         *target.patch.map {|patch| "echo #{patch} >> debian/patches/series"},
+         *Array(build_deb_instructions(builder, target))]
       end
     end # Ubuntu
   end # Image

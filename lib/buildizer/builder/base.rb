@@ -1,6 +1,8 @@
 module Buildizer
   module Builder
     class Base
+      using Refine
+
       attr_reader :packager
       attr_reader :work_path
       attr_reader :docker
@@ -34,14 +36,21 @@ module Buildizer
       end
 
       def new_target(target_name)
-        os_name, os_version, target_package_name, target_package_version = target_name.split('-', 4)
+        os_name, os_version, target_tag = target_name.split('/', 3)
 
         image = docker.new_image(os_name, os_version)
 
-        params = merge_os_params(image.os_name)
-        params = merge_os_version_params(image.os_name, image.os_version, into: params)
-        params = merge_base_target_params(target_name, target_package_name, target_package_version,
-                                          into: params) if target_package_name
+        params = initial_target_params
+        packager.buildizer_conf.each do |match_key, match_params|
+          match_os_name, match_os_version, match_target_tag = match_key.to_s.split('/', 3)
+          if image.os_name.match_glob?(match_os_name) and
+            ( match_os_version.nil? or image.os_version.match_glob?(match_os_version) ) and
+              ( match_target_tag.nil? or (not target_tag.nil? and
+                                          target_tag.match_glob?(match_target_tag)) )
+            params = merge_params(into: params, params: match_params)
+          end
+        end
+
         check_params! params
 
         target_klass.new(self, image, name: target_name, **params).tap do |target|
@@ -61,6 +70,8 @@ module Buildizer
           params[:prepare] = packager.prepare
           params[:build_dep] = packager.build_dep
           params[:before_build] = packager.before_build
+          params[:maintainer] = packager.maintainer
+          params[:maintainer_email] = packager.maintainer_email
         end
       end
 
@@ -73,37 +84,31 @@ module Buildizer
 
       def do_merge_params(into, params)
         {}.tap do |res|
-          res[:package_name] = into[:package_name] || params['package_name']
-          res[:package_version] = into[:package_version] || params['package_version']
+          res[:package_name] = params['package_name'] || into[:package_name]
+          res[:package_version] = params['package_version'] || into[:package_version]
           res[:package_cloud] = into[:package_cloud]
           res[:prepare] = into[:prepare] + Array(params['prepare'])
           res[:build_dep] = into[:build_dep] | Array(params['build_dep']).to_set
           res[:before_build] = into[:before_build] + Array(params['before_build'])
+          res[:maintainer] = params['maintainer'] || into[:maintainer]
+          res[:maintainer_email] = params['maintainer_email'] || into[:maintainer_email]
         end
       end
 
-      def merge_os_params(os_name, into: nil, &blk)
-        merge_params(into: into, params: packager.os_params(os_name), &blk)
-      end
-
-      def merge_os_version_params(os_name, os_version, into: nil, &blk)
-        merge_params(into: into,
-                     params: packager.os_params([os_name, os_version].join('-')), &blk)
-      end
-
-      def merge_base_target_params(target, target_package_name, target_package_version,
-                                   into: nil, &blk)
-        merge_params(into: into,
-                     params: {'package_name' => target_package_name,
-                              'package_version' => target_package_version}, &blk)
-      end
-
       def check_params!(params)
-        [:package_name, :package_version, :package_cloud].each do |param|
+        _required_params! [:package_name, :package_cloud], params
+      end
+
+      def _required_params!(required_params, params)
+        Array(required_params).each do |param|
           unless params[param] and not params[param].to_s.empty?
             raise Error, error: :input_error, message: "#{param} is not defined"
           end
         end
+      end
+
+      def build_jobs
+        File.open('/proc/cpuinfo').readlines.grep(/processor/).size
       end
 
       def prepare
@@ -160,11 +165,11 @@ module Buildizer
         targets.map do |target|
           target.tap do
             if packager.package_version_tag_required_for_deploy? and
-               packager.package_version_tag != target.package_version
+               packager.package_version_tag != target.package_version_tag
               raise(Error, error: :logical_error,
-                           message: "package_version and package_version_tag " +
-                                    "(env TRAVIS_TAG or CI_BUILD_TAG) should be the same " +
-                                    "for target '#{target.name}'")
+                           message: "#{target.package_version_tag_param_name} and "+
+                                    "package_version_tag (env TRAVIS_TAG or CI_BUILD_TAG) " +
+                                    "should be the same for target '#{target.name}'")
             end
           end
         end.each {|target| deploy_target(target)}

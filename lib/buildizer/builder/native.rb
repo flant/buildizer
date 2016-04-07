@@ -9,6 +9,11 @@ module Buildizer
         Target::Native
       end
 
+      def check_params!(params)
+        super
+        _required_params! :package_version, params
+      end
+
       def build_instructions(target)
         target.image.native_build_instructions(self, target)
       end

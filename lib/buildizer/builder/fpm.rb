@@ -28,19 +28,6 @@ module Buildizer
         end
       end
 
-      def cannot_redefine_package_params!(params, redefine_for: nil)
-        [:package_name, :package_version].each do |param|
-          raise(Error,
-            error: :input_error,
-            message: [
-              "cannot redefine #{param}",
-              redefine_for ? "for #{redefine_for}" : nil,
-              "in #{build_type} build_type",
-            ].compact.join(' ')
-          ) if params.key? param.to_s
-        end
-      end
-
       def do_merge_params(into, params)
         super.tap do |res|
           res[:fpm_script] = into[:fpm_script] + Array(params['fpm_script'])
@@ -56,28 +43,6 @@ module Buildizer
         end
       end
 
-      def merge_os_params(os_name, **kwargs, &blk)
-        super(os_name, **kwargs) do |into, params|
-          yield into, params if block_given?
-          cannot_redefine_package_params!(params, redefine_for: "os '#{os_name}'")
-        end
-      end
-
-      def merge_os_version_params(os_name, os_version, **kwargs, &blk)
-        super(os_name, os_version, **kwargs) do |into, params|
-          yield into, params if block_given?
-          cannot_redefine_package_params!(params,
-                                          redefine_for: "os version '#{os_name}-#{os_version}'")
-        end
-      end
-
-      def merge_base_target_params(target, target_package_name, target_package_version, **kwargs, &blk)
-        super(target, target_package_name, target_package_version, **kwargs) do |into, params|
-          yield into, params if block_given?
-          cannot_redefine_package_params!(params, redefine_for: "target '#{target}'")
-        end
-      end
-
       def check_params!(params)
         super
         if [:fpm_files, :fpm_config_files].all? {|param| params[param].empty?}
@@ -85,6 +50,7 @@ module Buildizer
                        message: ["either of fpm_files or fpm_config_files ",
                                  "required in #{build_type} build_type"].join
         end
+        _required_params! :package_version, params
       end
 
       def build_instructions(target)

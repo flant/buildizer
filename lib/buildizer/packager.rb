@@ -166,10 +166,6 @@ git add -v .travis.yml
       if res.nil? then res elsif res.empty? then nil else res end
     end
 
-    def os_params(os)
-      buildizer_conf['os'].to_h[os.to_s].to_h
-    end
-
     def before_prepare
       Array(buildizer_conf['before_prepare'])
     end
@@ -232,6 +228,14 @@ git add -v .travis.yml
       ENV['BUILDIZER_DOCKER_EMAIL'] || begin
         raise Error, error: :input_error, message: "BUILDIZER_DOCKER_EMAIL env variable required"
       end
+    end
+
+    def maintainer
+      buildizer_conf['maintainer']
+    end
+
+    def maintainer_email
+      buildizer_conf['maintainer_email']
     end
 
     def builder
