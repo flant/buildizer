@@ -79,9 +79,8 @@ module Buildizer
           args: "--append --name \"%{name}\" --email \"%{email}\" --message \"%{message}\""
         }
 
-        ["yum-builddep -y #{target.base_package_name}",
-         *Array(rpmdev_setuptree_instructions(builder, target)),
-         "yumdownloader --source #{target.package_name}",
+        [*Array(rpmdev_setuptree_instructions(builder, target)),
+         "yumdownloader --source #{target_package_spec(target)}",
          "rpm -i *.rpm",
          "gem install rpmchange",
          set_release_cmd % {value: "$(#{get_release_cmd})buildizer#{target.package_version}"},
@@ -91,6 +90,10 @@ module Buildizer
          },
          changelog_cmd % {name: '', email: '', message: 'Patch by buildizer'}, # TODO: name (maintainer), email (maintainer_email)
          *Array(build_rpm_instructions(builder, target))]
+      end
+
+      def target_package_spec(target)
+        [target.package_name, target.package_version].compact.join('-')
       end
     end # Centos
   end # Image

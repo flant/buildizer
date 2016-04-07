@@ -50,9 +50,8 @@ module Buildizer
       end
 
       def patch_build_instructions(builder, target)
-        ["apt-get build-dep -y #{target.package_name}",
-         "apt-get source #{target.package_name}#{target.package_version ? "=#{taarget.package_version}" : nil}",
-         'cd $(ls *.orig.tar.gz | ruby -ne "puts \$_.split(\\".orig.tar.gz\\").first.gsub(\\"_\\", \\"-\\")")',
+        ["apt-get source #{target_package_spec(target)}",
+         'cd $(ls *.orig.tar* | ruby -ne "puts \$_.split(\\".orig.tar\\").first.gsub(\\"_\\", \\"-\\")")',
          ["DEBFULLNAME="" DEBEMAIL="" debchange --newversion ",
           "$(dpkg-parsechangelog | grep \"Version:\" | cut -d\" \" -f2-)buildizer3 ",
           "--distribution #{os_codename} \"Patch by buildizer\""].join,
@@ -60,6 +59,10 @@ module Buildizer
          *target.patch.map {|patch| "sed -i \"/#{Regexp.escape(patch)}/d\" debian/patches/series"},
          *target.patch.map {|patch| "echo #{patch} >> debian/patches/series"},
          *Array(build_deb_instructions(builder, target))]
+      end
+
+      def target_package_spec(target)
+        [target.package_name, target.package_version].compact.join('=')
       end
     end # Ubuntu
   end # Image

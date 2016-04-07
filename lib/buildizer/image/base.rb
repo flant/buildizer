@@ -52,11 +52,19 @@ module Buildizer
         instructions << [instruction.to_s.upcase, cmd].join(' ')
       end
 
+      def patch_build_dep(builder, target)
+        target_package_spec(target)
+      end
+
       def native_build_instructions(builder, target)
         raise
       end
 
       def patch_build_instructions(builder, target)
+        raise
+      end
+
+      def target_package_spec(target)
         raise
       end
     end # Base
