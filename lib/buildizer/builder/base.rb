@@ -94,7 +94,7 @@ module Buildizer
       end
 
       def check_params!(params)
-        _required_params! [:package_name, :package_cloud], params
+        _required_params! :package_name, params
       end
 
       def _required_params!(required_params, params)
@@ -176,15 +176,25 @@ module Buildizer
 
       def deploy_target(target)
         cmd = Dir[target.image_build_path.join("*.#{target.image.fpm_output_type}")]
-                .map {|p| Pathname.new(p)}
-                .map {|p| ["package_cloud yank #{target.package_cloud_path} #{p.basename}",
-                           "package_cloud push #{target.package_cloud_path} #{p}",
-                           p.basename]}
-                .each {|yank, push, package|
-                  packager.command yank, desc: ["Package cloud yank package '#{package}'",
-                                                " of target '#{target.name}'"].join
-                  packager.command! push, desc: ["Package cloud push package '#{package}'",
-                                                 " of target '#{target.name}'"].join
+                .map {|p| Pathname.new(p)}.map {|package_path|
+                  package = package_path.basename
+                  target.package_cloud_desc.map do |desc|
+                    desc.merge(
+                      package: package,
+                      yank: "package_cloud yank #{desc[:path]} #{package}",
+                      push: "package_cloud push #{desc[:path]} #{package_path}",
+                    )
+                  end
+                }.flatten.each {|desc|
+                  packager.command desc[:yank],
+                    desc: ["Package cloud yank package '#{desc[:package]}'",
+                           " of target '#{target.name}'"].join,
+                    environment: {'PACKAGECLOUD_TOKEN' => desc[:token]}
+
+                  packager.command desc[:push],
+                    desc: ["Package cloud push package '#{desc[:package]}'",
+                           " of target '#{target.name}'"].join,
+                    environment: {'PACKAGECLOUD_TOKEN' =>desc[:token]}
                 }
       end
     end # Base

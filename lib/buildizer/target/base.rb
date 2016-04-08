@@ -14,7 +14,7 @@ module Buildizer
       attr_reader :maintainer
 
       def initialize(builder, image,
-                     name:, package_name:, package_version:, package_cloud:,
+                     name:, package_name:, package_version:, package_cloud: {},
                      prepare: [], build_dep: [], before_build: [],
                      maintainer: nil, &blk)
         @builder = builder
@@ -73,8 +73,16 @@ module Buildizer
         "#{docker_image_repository}:#{docker_image_tag}"
       end
 
-      def package_cloud_path
-        "#{package_cloud}/#{image.os_package_cloud_name}/#{image.os_package_cloud_version}"
+      def package_cloud_desc
+        package_cloud.map {|repo, token|
+          {repo: repo,
+           token: token,
+           path: _package_cloud_path(repo)}
+        }
+      end
+
+      def _package_cloud_path(repo)
+        "#{repo}/#{image.os_package_cloud_name}/#{image.os_package_cloud_version}"
       end
 
       def image_build_path

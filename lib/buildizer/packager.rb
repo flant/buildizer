@@ -205,7 +205,9 @@ git add -v .travis.yml
     end
 
     def package_cloud
-      buildizer_conf['package_cloud']
+      Hash(::JSON.load(ENV['PACKAGECLOUD']))
+    rescue Exception => err
+      raise Error, error: :input_error, message: "PACKAGECLOUD has bad value, hash {\"<repo>\": \"<token>\"} expected: #{err.message}"
     end
 
     def package_cloud_token

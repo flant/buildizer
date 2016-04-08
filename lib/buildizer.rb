@@ -1,5 +1,6 @@
 require 'thor'
 require 'yaml'
+require 'json'
 require 'net_status'
 require 'pathname'
 require 'shellfold'
