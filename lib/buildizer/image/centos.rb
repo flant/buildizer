@@ -86,9 +86,12 @@ module Buildizer
          set_release_cmd % {value: "$(#{get_release_cmd})buildizer#{target.package_version}"},
          *target.patch.map {|patch| "cp #{patch} ~/rpmbuild/SOURCES/"},
          *target.patch.map {|patch|
-           rpmchange_cmd % {cmd: :append, args: "--section prep --value \"patch -p1 < %{_sourcedir}/#{patch}\""}
+           rpmchange_cmd % {cmd: :append,
+                            args: "--section prep --value \"patch -p1 < %{_sourcedir}/#{patch}\""}
          },
-         changelog_cmd % {name: '', email: '', message: 'Patch by buildizer'}, # TODO: name (maintainer), email (maintainer_email)
+         changelog_cmd % {name: target.maintainer,
+                          email: target.maintainer_email,
+                          message: 'Patch by buildizer'},
          *Array(build_rpm_instructions(builder, target))]
       end
 

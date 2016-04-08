@@ -23,7 +23,6 @@ module Buildizer
           params[:fpm_provides] = Array(packager.buildizer_conf['fpm_provides'])
           params[:fpm_depends] = Array(packager.buildizer_conf['fpm_depends'])
           params[:fpm_description] = packager.buildizer_conf['fpm_description']
-          params[:fpm_maintainer] = packager.buildizer_conf['fpm_maintainer']
           params[:fpm_url] = packager.buildizer_conf['fpm_url']
         end
       end
@@ -38,7 +37,6 @@ module Buildizer
           res[:fpm_provides] = (into[:fpm_provides] + Array(params['fpm_provides'])).uniq
           res[:fpm_depends] = (into[:fpm_depends] + Array(params['fpm_depends'])).uniq
           res[:fpm_description] = params['fpm_description'] || into[:fpm_description]
-          res[:fpm_maintainer] = params['fpm_maintainer'] || into[:fpm_maintainer]
           res[:fpm_url] = params['fpm_url'] || into[:fpm_url]
         end
       end
@@ -92,8 +90,8 @@ module Buildizer
          "--iteration=#{release}",
          *fpm_script.values.map {|desc| "#{desc[:fpm_option]}=#{desc[:container_file]}"},
          *Array(target.image.fpm_extra_params),
+         (target.maintainer ? "--maintainer='#{target.maintainer}'" : nil),
          (target.fpm_description ? "--description='#{target.fpm_description}'" : nil),
-         (target.fpm_maintainer ? "--maintainer='#{target.fpm_maintainer}'" : nil),
          (target.fpm_url ? "--url='#{target.fpm_url}'" : nil),
          *target.fpm_conflicts.map{|pkg| "--conflicts=#{pkg}"},
          *target.fpm_replaces.map{|pkg| "--replaces=#{pkg}"},
