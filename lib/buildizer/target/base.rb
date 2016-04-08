@@ -49,7 +49,7 @@ module Buildizer
       end
 
       def maintainer_email
-        match = maintainer.match(/<(.*)>/)
+        match = maintainer.match(/<(.*)>/) if maintainer
         match[1] if match
       end
 
