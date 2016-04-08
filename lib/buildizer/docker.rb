@@ -85,18 +85,31 @@ module Buildizer
       Pathname.new('/extra')
     end
 
-    def run_in_image!(target, cmd:, env: {})
-      cmd = Array(cmd)
-
+    def run_target_container!(target:, env: {})
+      container = SecureRandom.uuid
       builder.packager.command! [
         "docker run",
+        "--detach --name #{container}",
         *env.map {|k,v| "-e #{k}=#{v}"},
         "-v #{builder.packager.package_path}:#{container_package_mount_path}:ro",
         "-v #{target.image_extra_path}:#{container_extra_path}:ro",
         "-v #{target.image_build_path}:#{container_build_path}",
         target.image.name,
-        "'#{['set -e', *cmd].join('; ')}'"
-      ].join(' '), desc: "Run build in docker image #{target.image.name}"
+        "'while true ; do sleep 1 ; done'",
+      ].join(' '), desc: "Run container '#{container}' from docker image '#{target.image.name}'"
+      container
+    end
+
+    def shutdown_container!(container:)
+      builder.packager.command! "docker kill #{container}", desc: "Kill container '#{container}'"
+      builder.packager.command! "docker rm #{container}", desc: "Remove container '#{container}'"
+    end
+
+    def run_in_container!(container:, cmd:, desc: nil)
+      builder.packager.command! [
+        "docker exec #{container}",
+        "/bin/bash -lec '#{['set -e', *Array(cmd)].join('; ')}'",
+      ].join(' '), desc: desc || "Run in docker container '#{container}'"
     end
   end # Docker
 end # Buildizer
