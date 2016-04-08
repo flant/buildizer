@@ -106,7 +106,7 @@ module Buildizer
       end
 
       def build_jobs
-        File.open('/proc/cpuinfo').readlines.grep(/processor/).size
+        1 || File.open('/proc/cpuinfo').readlines.grep(/processor/).size
       end
 
       def prepare
