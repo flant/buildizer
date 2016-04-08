@@ -71,7 +71,6 @@ module Buildizer
           params[:build_dep] = packager.build_dep
           params[:before_build] = packager.before_build
           params[:maintainer] = packager.maintainer
-          params[:maintainer_email] = packager.maintainer_email
         end
       end
 
@@ -91,7 +90,6 @@ module Buildizer
           res[:build_dep] = into[:build_dep] | Array(params['build_dep']).to_set
           res[:before_build] = into[:before_build] + Array(params['before_build'])
           res[:maintainer] = params['maintainer'] || into[:maintainer]
-          res[:maintainer_email] = params['maintainer_email'] || into[:maintainer_email]
         end
       end
 

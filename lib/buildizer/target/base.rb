@@ -12,12 +12,11 @@ module Buildizer
       attr_reader :build_dep
       attr_reader :before_build
       attr_reader :maintainer
-      attr_reader :maintainer_email
 
       def initialize(builder, image,
                      name:, package_name:, package_version:, package_cloud:,
                      prepare: [], build_dep: [], before_build: [],
-                     maintainer: nil, maintainer_email: nil, &blk)
+                     maintainer: nil, &blk)
         @builder = builder
         @image = image
 
@@ -29,7 +28,6 @@ module Buildizer
         @build_dep = build_dep
         @before_build = before_build
         @maintainer = maintainer
-        @maintainer_email = maintainer_email
 
         yield if block_given?
 
@@ -48,6 +46,11 @@ module Buildizer
 
       def package_version_tag_param_name
         raise
+      end
+
+      def maintainer_email
+        match = maintainer.match(/<(.*)>/)
+        match[1] if match
       end
 
       def package_version

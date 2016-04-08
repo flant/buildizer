@@ -234,10 +234,6 @@ git add -v .travis.yml
       buildizer_conf['maintainer']
     end
 
-    def maintainer_email
-      buildizer_conf['maintainer_email']
-    end
-
     def builder
       @builder ||= begin
         build_type = buildizer_conf['build_type']
