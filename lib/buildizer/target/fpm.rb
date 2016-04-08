@@ -52,6 +52,8 @@ module Buildizer
         files.reduce({}) do |res, (dst, src)|
           if src.is_a? Array
             res.merge src.map {|src_file| [File.join(dst, src_file), src_file]}.to_h
+          elsif src.nil?
+            res.merge dst => File.basename(dst)
           else
             res.merge dst => src
           end
