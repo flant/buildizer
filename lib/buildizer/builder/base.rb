@@ -150,16 +150,8 @@ module Buildizer
           *Array(build_instructions(target)),
         ]
 
-        container = docker.run_target_container! target: target
-        begin
-          docker.run_in_container!(
-            container: container,
-            cmd: cmd,
-            desc: "Run build in docker container '#{container}'"
-          )
-        ensure
-          docker.shutdown_container! container: container
-        end
+        docker.run_in_image!(target: target, cmd: cmd,
+                             desc: "Run build in docker image '#{target.image.name}'")
       end
 
       def deploy

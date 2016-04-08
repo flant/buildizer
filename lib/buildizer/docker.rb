@@ -88,14 +88,9 @@ module Buildizer
     def run_target_container!(target:, env: {})
       container = SecureRandom.uuid
       builder.packager.command! [
-        "docker run",
-        "--detach --name #{container}",
-        *env.map {|k,v| "-e #{k}=#{v}"},
-        "-v #{builder.packager.package_path}:#{container_package_mount_path}:ro",
-        "-v #{target.image_extra_path}:#{container_extra_path}:ro",
-        "-v #{target.image_build_path}:#{container_build_path}",
-        target.image.name,
-        "'while true ; do sleep 1 ; done'",
+        "docker run --detach --name #{container}",
+        *Array(_common_docker_params(target, env)),
+        _wrap_docker_run("while true ; do sleep 1 ; done"),
       ].join(' '), desc: "Run container '#{container}' from docker image '#{target.image.name}'"
       container
     end
@@ -108,8 +103,36 @@ module Buildizer
     def run_in_container!(container:, cmd:, desc: nil)
       builder.packager.command! [
         "docker exec #{container}",
-        "/bin/bash -lec '#{['set -e', *Array(cmd)].join('; ')}'",
-      ].join(' '), desc: desc || "Run in docker container '#{container}'"
+        _wrap_docker_exec(cmd),
+      ].join(' '), desc: desc
+    end
+
+    def run_in_image!(target:, cmd:, env: {}, desc: nil)
+      builder.packager.command! [
+        "docker run --rm",
+        *Array(_common_docker_params(target, env)),
+        _wrap_docker_run(cmd),
+      ].join(' '), desc: desc
+    end
+
+    def _common_docker_params(target, env)
+      [*env.map {|k,v| "-e #{k}=#{v}"},
+       "-v #{builder.packager.package_path}:#{container_package_mount_path}:ro",
+       "-v #{target.image_extra_path}:#{container_extra_path}:ro",
+       "-v #{target.image_build_path}:#{container_build_path}",
+       target.image.name]
+    end
+
+    def _wrap_docker_exec(cmd)
+      "/bin/bash -lec '#{_make_cmd(cmd)}'"
+    end
+
+    def _wrap_docker_run(cmd)
+      "'#{['set -e', _make_cmd(cmd)].join('; ')}'"
+    end
+
+    def _make_cmd(cmd)
+      Array(cmd).join('; ')
     end
   end # Docker
 end # Buildizer
