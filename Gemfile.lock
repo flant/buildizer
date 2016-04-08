@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/flant/shellfold.git
-  revision: 80f6195e244545b980de700a5c37430e3edf6976
+  revision: 5f0b89c3f53c1424e5965283354f7f92ab15aea3
   specs:
     shellfold (0.0.3)
       mixlib-shellout (>= 2.2.6, < 3.0)
