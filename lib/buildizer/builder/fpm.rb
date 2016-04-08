@@ -97,8 +97,8 @@ module Buildizer
          *target.fpm_replaces.map{|pkg| "--replaces=#{pkg}"},
          *target.fpm_provides.map{|pkg| "--provides=#{pkg}"},
          *target.fpm_depends.map{|pkg| "--depends=#{pkg}"},
-         *target.fpm_config_files.keys.map {|p| "--config-files=#{p}"},
-         *target.fpm_files.merge(target.fpm_config_files).map {|p1, p2| "#{p2}=#{p1}"},
+         *target.fpm_config_files_expand.keys.map {|p| "--config-files=#{p}"},
+         *target.fpm_files_expand.merge(target.fpm_config_files_expand).map {|p1, p2| "#{p2}=#{p1}"},
         ].compact.join(' ')
       end
     end # Fpm

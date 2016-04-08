@@ -39,6 +39,24 @@ module Buildizer
       def package_version_tag_param_name
         :package_version
       end
+
+      def fpm_config_files_expand
+        _expand_files_directive fpm_config_files
+      end
+
+      def fpm_files_expand
+        _expand_files_directive fpm_files
+      end
+
+      def _expand_files_directive(files)
+        files.reduce({}) do |res, (dst, src)|
+          if src.is_a? Array
+            res.merge src.map {|src_file| [File.join(dst, src_file), src_file]}.to_h
+          else
+            res.merge dst => src
+          end
+        end
+      end
     end # Fpm
   end # Target
 end # Buildizer
