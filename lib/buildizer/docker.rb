@@ -104,7 +104,7 @@ module Buildizer
       builder.packager.command! [
         "docker exec #{container}",
         _wrap_docker_exec(cmd),
-      ].join(' '), desc: desc
+      ].join(' '), timeout: 24*60*60, desc: desc
     end
 
     def run_in_image!(target:, cmd:, env: {}, desc: nil)
@@ -112,7 +112,7 @@ module Buildizer
         "docker run --rm",
         *Array(_common_docker_params(target, env)),
         _wrap_docker_run(cmd),
-      ].join(' '), desc: desc
+      ].join(' '), timeout: 24*60*60, desc: desc
     end
 
     def _common_docker_params(target, env)
