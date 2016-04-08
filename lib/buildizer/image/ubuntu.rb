@@ -54,7 +54,8 @@ module Buildizer
       def patch_build_instructions(builder, target)
         ["apt-get source #{target_package_spec(target)}",
          'cd $(ls *.orig.tar* | ruby -ne "puts \$_.split(\\".orig.tar\\").first.gsub(\\"_\\", \\"-\\")")',
-         ["DEBFULLNAME="" DEBEMAIL="" debchange --newversion ",
+         ["DEBFULLNAME=\"#{target.maintainer}\" DEBEMAIL=\"#{target.maintainer_email}\" ",
+          "debchange --newversion ",
           "$(dpkg-parsechangelog | grep \"Version:\" | cut -d\" \" -f2-)buildizer#{target.patch_version} ",
           "--distribution #{os_codename} \"Patch by buildizer\""].join,
          *target.patch.map {|patch| "cp ../#{patch} debian/patches/"},
