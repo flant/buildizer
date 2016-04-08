@@ -8,6 +8,10 @@ module Buildizer
       def match_glob?(glob)
         File.fnmatch? glob, self, File::FNM_EXTGLOB
       end
+
+      def on?
+        ['1', 'true', 'yes'].include? self.downcase
+      end
     end
   end # Refine
 end # Buildizer

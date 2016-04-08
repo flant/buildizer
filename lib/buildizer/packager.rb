@@ -1,5 +1,7 @@
 module Buildizer
   class Packager
+    using Refine
+
     attr_reader :package_path
     attr_reader :buildizer_conf_path
     attr_reader :options_path
@@ -14,7 +16,7 @@ module Buildizer
       @travis_path = package_path.join('.travis.yml')
       @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
       @_options = options
-      @debug = debug
+      @debug = ENV['BUILDIZER_DEBUG'].nil? ? debug : ENV['BUILDIZER_DEBUG'].to_s.on?
     end
 
     def initialized?
@@ -158,7 +160,7 @@ git add -v .travis.yml
     end
 
     def package_version_tag_required_for_deploy?
-      ['1', 'true', 'yes'].include? ENV['BUILDIZER_REQUIRE_TAG'].to_s.downcase
+      ENV['BUILDIZER_REQUIRE_TAG'].to_s.on?
     end
 
     def package_version_tag
