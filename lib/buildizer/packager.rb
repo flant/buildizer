@@ -204,15 +204,23 @@ git add -v .travis.yml
       buildizer_conf['image']
     end
 
-    def package_cloud
-      Hash(::JSON.load(ENV['PACKAGECLOUD']))
-    rescue Exception => err
-      raise Error, error: :input_error, message: "PACKAGECLOUD has bad value, hash {\"<repo>\": \"<token>\"} expected: #{err.message}"
+    def package_cloud_repo
+      ENV['PACKAGECLOUD'].to_s.split(',')
     end
 
-    def package_cloud_token
-      ENV['PACKAGECLOUD_TOKEN'] || begin
-        raise Error, error: :input_error, message: "PACKAGECLOUD_TOKEN env variable required"
+    def package_cloud_org
+      default_token = ENV['PACKAGECLOUD_TOKEN']
+      package_cloud_repo.map {|repo| repo.split('/').first}.uniq.map do |org|
+        [org, ENV["PACKAGECLOUD_TOKEN_#{org.upcase}"] || default_token]
+      end.to_h
+    end
+
+    def package_cloud
+      tokens = package_cloud_org
+      package_cloud_repo.map do |repo|
+        org = repo.split('/').first
+        token = tokens[org]
+        {org: org, repo: repo, token: token}
       end
     end
 

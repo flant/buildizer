@@ -159,6 +159,17 @@ module Buildizer
            not packager.package_version_tag
           puts "package_version_tag (env TRAVIS_TAG or CI_BUILD_TAG) required: ignoring deploy"
           return
+        elsif packager.package_cloud.empty?
+          warn "No package cloud settings " +
+               "(PACKAGECLOUD, PACKAGECLOUD_TOKEN, PACKAGECLOUD_TOKEN_<ORG>) [WARN]"
+          return
+        end
+
+        packager.package_cloud_org.each do |org, token|
+          unless token
+            warn "No packagecloud token defined for org '#{org}' " +
+                 "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase}) [WARN]"
+          end
         end
 
         targets.map do |target|
@@ -178,11 +189,11 @@ module Buildizer
         cmd = Dir[target.image_build_path.join("*.#{target.image.fpm_output_type}")]
                 .map {|p| Pathname.new(p)}.map {|package_path|
                   package = package_path.basename
-                  target.package_cloud_desc.map do |desc|
+                  target.package_cloud.map do |desc|
                     desc.merge(
                       package: package,
-                      yank: "package_cloud yank #{desc[:path]} #{package}",
-                      push: "package_cloud push #{desc[:path]} #{package_path}",
+                      yank: "package_cloud yank #{desc[:package_path]} #{package}",
+                      push: "package_cloud push #{desc[:package_path]} #{package_path}",
                     )
                   end
                 }.flatten.each {|desc|
