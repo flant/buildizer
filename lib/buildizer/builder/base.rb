@@ -110,7 +110,11 @@ module Buildizer
       end
 
       def verify
-        targets
+        targets.tap do |res|
+          unless res.any?
+            raise Error, error: :input_error, message: "target is not defined"
+          end
+        end
       end
 
       def prepare
