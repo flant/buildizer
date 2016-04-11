@@ -57,6 +57,10 @@ module Buildizer
       builder.deploy
     end
 
+    def verify!
+      builder.verify
+    end
+
     def buildizer_conf
       @buildizer_conf ||= (YAML.load((buildizer_conf_path.read rescue "")) || {})
     end
@@ -249,7 +253,7 @@ git add -v .travis.yml
     def builder
       @builder ||= begin
         build_type = buildizer_conf['build_type']
-        raise Error, error: :input_error, message: "no build_type given" unless build_type
+        raise Error, error: :input_error, message: "build_type is not defined" unless build_type
         klass = {fpm: Builder::Fpm,
                  native: Builder::Native,
                  patch: Builder::Patch}[build_type.to_s.to_sym]

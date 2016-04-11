@@ -109,6 +109,10 @@ module Buildizer
         File.open('/proc/cpuinfo').readlines.grep(/processor/).size
       end
 
+      def verify
+        targets
+      end
+
       def prepare
         docker.login!
 

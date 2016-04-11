@@ -54,5 +54,11 @@ module Buildizer
     def deploy
       self.class.construct_packager(options).deploy!
     end
+
+    desc "verify", "Verify targets params"
+    shared_options
+    def verify
+      self.class.construct_packager(options).verify!
+    end
   end # Cli
 end # Buildizer
