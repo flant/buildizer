@@ -5,7 +5,7 @@
 require 'buildizer'
 
 begin
-  Buildizer::Cli.start
+  Buildizer::Cli::Main.start
 rescue Buildizer::Error => e
   $stderr.puts [e.net_status[:error], e.net_status[:message]].compact.join(': ')
   exit 1
