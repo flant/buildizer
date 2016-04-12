@@ -3,3 +3,4 @@
 /buildizer*.gem
 *.swp
 .tags
+/.bundle
