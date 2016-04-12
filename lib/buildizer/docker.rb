@@ -31,6 +31,11 @@ module Buildizer
     end
 
     def with_cache(&blk)
+      warn("No docker cache account settings " +
+           "(BUILDIZER_DOCKER_CACHE, BUILDIZER_DOCKER_CACHE_USERNAME, " +
+           "BUILDIZER_DOCKER_CACHE_PASSWORD, BUILDIZER_DOCKER_CACHE_EMAIL, " +
+           "BUILDIZER_DOCKER_CACHE_SERVER) [WARN]") unless cache
+
       cache_login! if cache
       begin
         yield if block_given?
