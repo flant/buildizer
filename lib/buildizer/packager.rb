@@ -228,22 +228,13 @@ git add -v .travis.yml
       end
     end
 
-    def docker_username
-      ENV['BUILDIZER_DOCKER_USERNAME'] || begin
-        raise Error, error: :input_error, message: "BUILDIZER_DOCKER_USERNAME env variable required"
-      end
-    end
-
-    def docker_password
-      ENV['BUILDIZER_DOCKER_PASSWORD'] || begin
-        raise Error, error: :input_error, message: "BUILDIZER_DOCKER_PASSWORD env variable required"
-      end
-    end
-
-    def docker_email
-      ENV['BUILDIZER_DOCKER_EMAIL'] || begin
-        raise Error, error: :input_error, message: "BUILDIZER_DOCKER_EMAIL env variable required"
-      end
+    def docker_cache
+      return unless org = ENV['BUILDIZER_DOCKER_CACHE']
+      {username: ENV['BUILDIZER_DOCKER_CACHE_USERNAME'],
+       password: ENV['BUILDIZER_DOCKER_CACHE_PASSWORD'],
+       email: ENV['BUILDIZER_DOCKER_CACHE_EMAIL'],
+       server: ENV['BUILDIZER_DOCKER_CACHE_SERVER'],
+       org: org}
     end
 
     def maintainer

@@ -1,17 +1,11 @@
 module Buildizer
   class Docker
     attr_reader :builder
-    attr_reader :username
-    attr_reader :password
-    attr_reader :email
-    attr_reader :server
+    attr_reader :cache
 
-    def initialize(builder, username:, password:, email:, server: nil)
+    def initialize(builder, cache: nil)
       @builder = builder
-      @username = username
-      @password = password
-      @email = email
-      @server = server
+      @cache = cache
     end
 
     def image_klass(os_name, os_version)
@@ -36,33 +30,52 @@ module Buildizer
       klass.new(self, **kwargs)
     end
 
-    def login!
-      docker_login = ["docker login --email=#{email} --username=#{username} --password=#{password}"]
-      docker_login << "--server=#{server}" if server
-      builder.packager.command! docker_login.join(' '), desc: "Docker login"
+    def with_cache(&blk)
+      cache_login! if cache
+      begin
+        yield if block_given?
+      ensure
+        cache_logout! if cache
+      end
     end
 
-    def logout!
-      builder.packager.command! 'docker logout', desc: "Docker logout"
+    def cache_login!
+      raise Error, error: :logical_error, message: "no docker cache account info" unless cache
+
+      cmd = ["docker login"]
+      cmd << "--email=#{cache[:email]}" if cache[:email]
+      cmd << "--username=#{cache[:username]}" if cache[:username]
+      cmd << "--password=#{cache[:password]}" if cache[:password]
+      cmd << "--server=#{cache[:server]}" if cache[:server]
+      builder.packager.command! cmd.join(' '), desc: "Docker cache account login"
     end
 
-    def pull_image!(image)
-      builder.packager.command "docker pull #{image.base_image}", desc: "Docker pull #{image.base_image}"
-      builder.packager.command "docker pull #{image.name}", desc: "Docker pull #{image.name}"
+    def cache_logout!
+      raise Error, error: :logical_error, message: "no docker cache account info" unless cache
+      builder.packager.command! 'docker logout', desc: "Docker cache account logout"
     end
 
-    def push_image!(image)
-      builder.packager.command! "docker push #{image.name}", desc: "Docker push #{image.name}"
+    def pull_image(image)
+      builder.packager.command!("docker pull #{image.base_image}",
+                                desc: "Docker pull #{image.base_image}")
+
+      builder.packager.command("docker pull #{image.name}",
+                               desc: "Docker pull #{image.name}") if cache
+    end
+
+    def push_image(image)
+      builder.packager.command("docker push #{image.name}",
+                               desc: "Docker push #{image.name}") if cache
     end
 
     def build_image!(target)
-      pull_image! target.image
+      pull_image target.image
 
       target.image_work_path.join('Dockerfile').write [*target.image.instructions, nil].join("\n")
       builder.packager.command! "docker build -t #{target.image.name} #{target.image_work_path}",
                                 desc: "Docker build image #{target.image.name}"
 
-      push_image! target.image
+      push_image target.image
     end
 
     def container_package_path

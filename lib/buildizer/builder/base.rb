@@ -13,12 +13,7 @@ module Buildizer
         @work_path = packager.work_path.join('builder').expand_path
         work_path.mkpath
 
-        @docker = Docker.new(self,
-          username: packager.docker_username,
-          password: packager.docker_password,
-          email: packager.docker_email,
-          server: packager.docker_server,
-        )
+        @docker = Docker.new(self, cache: packager.docker_cache)
       end
 
       def build_type
@@ -118,15 +113,15 @@ module Buildizer
       end
 
       def prepare
-        docker.login!
+        docker.with_cache do
+          packager.before_prepare
+                  .each {|cmd| packager.command! cmd, desc: "Before prepare command: #{cmd}"}
 
-        begin
-          packager.before_prepare.each {|cmd| packager.command! cmd, desc: "Before prepare command: #{cmd}"}
           targets.each {|target| prepare_target_image(target)}
-          packager.after_prepare.each {|cmd| packager.command! cmd, desc: "After prepare command: #{cmd}"}
-        ensure
-          docker.logout!
-        end
+
+          packager.after_prepare
+                  .each {|cmd| packager.command! cmd, desc: "After prepare command: #{cmd}"}
+        end # with_cache
       end
 
       def prepare_target_image(target)
