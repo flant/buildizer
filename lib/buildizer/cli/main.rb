@@ -6,15 +6,6 @@ module Buildizer
       desc "setup", "Setup buildizer settings and hooks"
       subcommand "setup", Setup
 
-      desc "init", "Initialize settings (.travis.yml, .buildizer.yml, git pre-commit hook)"
-      shared_options
-      method_option :latest,
-        type: :boolean,
-        desc: "use buildizer github master branch"
-      def init
-        self.class.construct_packager(options).init!
-      end
-
       desc "update", "Regenerate .travis.yml"
       shared_options
       def update

@@ -73,8 +73,20 @@ module Buildizer
       end
     end
 
-    def options_setup!
-      options_path.write YAML.dump(options)
+    def with_log(desc: nil, &blk)
+      $stdout.write("File #{desc} ... ") if debug and desc
+      blk.call do |status|
+        $stdout.write("#{status.to_s}\n") if status and debug
+      end
+    end
+
+    def setup_options!
+      with_log(desc: options_path.to_s) do |&fin|
+        recreate = options_path.exist?
+        options_path.write YAML.dump(options)
+        fin.call recreate ? "RECREATED" : "CREATED"
+      end
+
       @options = nil
     end
 
