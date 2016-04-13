@@ -27,6 +27,10 @@ module Buildizer
         end
 
         packager.ci.setup! if packager.ci.cli.ask_setup?
+
+        packager.overcommit_setup!
+        packager.overcommit_verify_setup!
+        packager.overcommit_ci_setup!
       end
     end # Setup
   end # Cli

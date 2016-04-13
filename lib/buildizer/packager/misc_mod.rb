@@ -17,7 +17,7 @@ module Buildizer
         Mixlib::ShellOut.new(*args, **kwargs).tap do |cmd|
           cmd.run_command
           if not cmd.status.success? and do_raise
-            raise Error.new(error: :error, message: "external command error")
+            raise Error.new(error: :error, message: "external command error: #{cmd.stdout + cmd.stderr}")
           end
         end
       end

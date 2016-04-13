@@ -1,18 +1,16 @@
 module Buildizer
   class Packager
     module ConfMod
+      using Refine
+
       attr_reader :buildizer_conf_path
 
       def buildizer_conf
-        (@buildizer_conf ||= (YAML.load(buildizer_conf_path.read) rescue {})).tap do |res|
-          @_buildizer_conf.each do |k, v|
-            res[k.to_s] = v unless v.nil?
-          end
-        end
+        @buildizer_conf ||= buildizer_conf_path.load_yaml
       end
 
-      def buildizer_conf_update(buildizer_conf)
-        @_buildizer_conf.update buildizer_conf
+      def buildizer_conf_update(conf)
+        buildizer_conf.update conf
       end
 
       def buildizer_conf_setup!
@@ -112,7 +110,6 @@ module Buildizer
         def initialize(**kwargs)
           super(**kwargs)
           @buildizer_conf_path = package_path.join('Buildizer')
-          @_buildizer_conf = {}
         end
       end # Initialize
 

@@ -6,6 +6,7 @@ module Buildizer
     include OptionsMod
     include CiMod
     include ConfMod
+    include OvercommitMod
 
     attr_reader :package_path
     attr_reader :work_path

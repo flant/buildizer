@@ -1,6 +1,8 @@
 module Buildizer
   module Ci
     class Base
+      using Refine
+
       attr_reader :packager
 
       def initialize(packager)
@@ -10,10 +12,7 @@ module Buildizer
       end
 
       def conf
-        @conf ||= (conf_path.exist? ? YAML.load(conf_path.read) : {})
-      rescue Psych::Exception => err
-        raise Error, error: :input_error,
-                     message: "bad #{ci_name} config file #{conf_path}: #{err.message}"
+        @conf ||= conf_path.load_yaml
       end
 
       def conf_path
@@ -51,6 +50,7 @@ module Buildizer
            'echo "export BUNDLE_GEMFILE=~/buildizer/Gemfile" | tee -a ~/.bashrc',
            'export BUNDLE_GEMFILE=~/buildizer/Gemfile',
            'gem install bundler',
+           'gem install overcommit',
            'bundle install',
           ]
         else
