@@ -1,16 +1,10 @@
 module Buildizer
   module Cli
     class Main < Base
-      include OptionsMod
+      include OptionMod
 
       desc "setup", "Setup buildizer settings and hooks"
       subcommand "setup", Setup
-
-      desc "update", "Regenerate .travis.yml"
-      shared_options
-      def update
-        self.class.construct_packager(options).update!
-      end
 
       desc "deinit", "Deinitialize settings (.buildizer.yml, git pre-commit hook)"
       shared_options

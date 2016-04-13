@@ -5,18 +5,37 @@ module Buildizer
     attr_reader :package_path
     attr_reader :buildizer_conf_path
     attr_reader :options_path
-    attr_reader :travis_path
     attr_reader :work_path
     attr_reader :debug
+    attr_reader :ci
 
     def initialize(options: {}, debug: false)
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @buildizer_conf_path = package_path.join('Buildizer')
       @options_path = package_path.join('.buildizer.yml')
-      @travis_path = package_path.join('.travis.yml')
       @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
       @_options = options
+      @_buildizer_conf = {}
       @debug = ENV['BUILDIZER_DEBUG'].nil? ? debug : ENV['BUILDIZER_DEBUG'].to_s.on?
+      @ci = _construct_ci
+    end
+
+    def _construct_ci
+      res = raw_command! 'git config --get remote.origin.url'
+      git_remote = res.stdout.strip
+      if git_remote.start_with? 'http://'
+        git_url = git_remote.split('http://', 2).last
+      elsif git_remote.start_with? 'https://'
+        git_url = git_remote.split('https://', 2).last
+      else
+        git_url = git_remote.split('@', 2).last
+      end
+
+      if git_url and git_url.start_with? 'github'
+        Ci::Travis.new(self)
+      elsif git_url and git_url.start_with? 'gitlab'
+        Ci::GitlabCi.new(self)
+      end
     end
 
     def initialized?
@@ -24,7 +43,7 @@ module Buildizer
     end
 
     def enabled?
-      not (ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']).empty?
+      !!ci.git_tag
     end
 
     def init!
@@ -32,17 +51,12 @@ module Buildizer
 
       git_precommit_init!
       options_setup!
-      travis_setup!
     end
 
     def deinit!
       raise Error, error: :logical_error, message: "not initialized" unless initialized?
       options_path.delete
       git_precommit_deinit!
-    end
-
-    def update!
-      travis_setup!
     end
 
     def prepare!
@@ -61,68 +75,56 @@ module Buildizer
       builder.verify
     end
 
-    def buildizer_conf
-      @buildizer_conf ||= (YAML.load((buildizer_conf_path.read rescue "")) || {})
-    end
 
-    def options
-      @options ||= (YAML.load(options_path.read) rescue {}).tap do |res|
-        @_options.each do |k, v|
-          res[k] = v unless v.nil?
+    def buildizer_conf
+      (@buildizer_conf ||= (YAML.load(buildizer_conf_path.read) rescue {})).tap do |res|
+        @_buildizer_conf.each do |k, v|
+          res[k.to_s] = v unless v.nil?
         end
       end
     end
 
-    def with_log(desc: nil, &blk)
-      $stdout.write("File #{desc} ... ") if debug and desc
-      blk.call do |status|
-        $stdout.write("#{status.to_s}\n") if status and debug
+    def buildizer_conf_update(buildizer_conf)
+      @_buildizer_conf.update buildizer_conf
+    end
+
+    def buildizer_conf_setup!
+      with_log(desc: buildizer_conf_path.to_s) do |&fin|
+        recreate = buildizer_conf_path.exist?
+        buildizer_conf_path.write YAML.dump(buildizer_conf)
+        fin.call recreate ? "UPDATED" : "CREATED"
       end
     end
 
-    def setup_options!
+
+    def options
+      (@options ||= (YAML.load(options_path.read) rescue {})).tap do |res|
+        @_options.each do |k, v|
+          res[k.to_s] = v unless v.nil?
+        end
+      end
+    end
+
+    def option_set(key, value)
+      @_options[key] = value
+    end
+
+    def options_setup!
       with_log(desc: options_path.to_s) do |&fin|
         recreate = options_path.exist?
         options_path.write YAML.dump(options)
-        fin.call recreate ? "RECREATED" : "CREATED"
+        fin.call recreate ? "UPDATED" : "CREATED"
       end
 
       @options = nil
     end
 
-    def travis
-      @travis ||= (travis_path.exist? ? YAML.load(travis_path.read) : {})
-    rescue Psych::Exception => err
-      raise Error, error: :input_error, message: "bad travis config file #{file}: #{err.message}"
-    end
 
-    def travis_setup!
-      install = [
-        'sudo apt-get update',
-        'sudo apt-get install -y apt-transport-https ca-certificates',
-        'sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D',
-        'echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee /etc/apt/sources.list.d/docker.list',
-        'sudo apt-get update',
-        'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine=1.9.1-0~trusty', # FIXME [https://github.com/docker/docker/issues/20316]
-        'echo "docker-engine hold" | sudo dpkg --set-selections',
-      ]
-      install.push(*Array(buildizer_install_instructions(latest: options['latest'])))
-
-      env = targets.map {|t| "BUILDIZER_TARGET=#{t}"}
-
-      travis_path.write YAML.dump(travis.merge(
-        'dist' => 'trusty',
-        'sudo' => 'required',
-        'cache' => 'apt',
-        'language' => 'ruby',
-        'rvm' => '2.2.1',
-        'install' => install,
-        'before_script' => 'buildizer prepare',
-        'script' => 'buildizer build',
-        'env' => env,
-        'after_success' => 'buildizer deploy',
-      ))
-      @travis = nil
+    def with_log(desc: nil, &blk)
+      $stdout.write("File #{desc} ... ") if desc
+      blk.call do |status|
+        $stdout.write("#{status.to_s}\n") if status
+      end
     end
 
     def git_hooks_path
@@ -180,8 +182,7 @@ git add -v .travis.yml
     end
 
     def package_version_tag
-      res = ENV['TRAVIS_TAG'] || ENV['CI_BUILD_TAG']
-      if res.nil? then res elsif res.empty? then nil else res end
+      ci.git_tag
     end
 
     def before_prepare
@@ -265,19 +266,6 @@ git add -v .travis.yml
       end
     end
 
-    def buildizer_install_instructions(latest: nil)
-      if latest
-        ['git clone https://github.com/flant/buildizer ~/buildizer',
-         'echo "export BUNDLE_GEMFILE=~/buildizer/Gemfile" | tee -a ~/.bashrc',
-         'export BUNDLE_GEMFILE=~/buildizer/Gemfile',
-         'gem install bundler',
-         'bundle install',
-        ]
-      else
-        'gem install buildizer'
-      end
-    end
-
     def command(*args, do_raise: false, **kwargs)
       Shellfold.run(*args, live_log: debug, **kwargs).tap do |cmd|
         if not cmd.status.success? and do_raise
@@ -288,6 +276,19 @@ git add -v .travis.yml
 
     def command!(*args, **kwargs)
       command(*args, do_raise: true, log_failure: true, **kwargs)
+    end
+
+    def raw_command(*args, do_raise: false, **kwargs)
+      Mixlib::ShellOut.new(*args, **kwargs).tap do |cmd|
+        cmd.run_command
+        if not cmd.status.success? and do_raise
+          raise Error.new(error: :error, message: "external command error")
+        end
+      end
+    end
+
+    def raw_command!(*args, **kwargs)
+      raw_command(*args, do_raise: true, **kwargs)
     end
   end # Packager
 end # Buildizer

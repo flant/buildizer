@@ -1,7 +1,7 @@
 module Buildizer
   module Cli
     class Base < ::Thor
-      include OptionsMod
+      include OptionMod
 
       add_shared_options(
         debug: {type: :boolean, default: false, desc: "turn on live logging for external commands"},

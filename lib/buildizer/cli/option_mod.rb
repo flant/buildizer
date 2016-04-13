@@ -1,6 +1,6 @@
 module Buildizer
   module Cli
-    module OptionsMod
+    module OptionMod
       class << self
         def included(base)
           base.send(:extend, ClassMethods)
@@ -34,6 +34,6 @@ module Buildizer
           Buildizer::Packager.new(options: {'latest' => options['latest']}, debug: options['debug'])
         end
       end # ClassMethods
-    end # OptionsMod
+    end # OptionMod
   end # Cli
 end # Buildizer
