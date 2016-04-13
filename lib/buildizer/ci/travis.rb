@@ -17,8 +17,7 @@ module Buildizer
         install.push(*Array(buildizer_install_instructions(latest: packager.options['latest'])))
 
         env = packager.targets.map {|t| "BUILDIZER_TARGET=#{t}"}
-
-        conf_path.write YAML.dump(conf.merge(
+        conf_raw = YAML.dump(conf.merge(
           'dist' => 'trusty',
           'sudo' => 'required',
           'cache' => 'apt',
@@ -30,6 +29,8 @@ module Buildizer
           'env' => env,
           'after_success' => 'buildizer deploy',
         ))
+        packager.write_path(conf_path, conf_raw)
+
         @conf = nil
       end
 

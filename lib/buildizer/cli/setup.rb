@@ -9,11 +9,13 @@ module Buildizer
       def all
         packager = self.class.construct_packager(options)
 
-        version = ask("Buildizer version to use in #{packager.ci.ci_name}",
-                       limited_to: ["0.0.7", "latest"],
-                       default: "latest")
-        packager.option_set('latest', version == 'latest')
-        packager.options_setup!
+        if ask_setup_conf_file? packager.options_path
+          version = ask("Buildizer version to use in #{packager.ci.ci_name}",
+                         limited_to: ["0.0.7", "latest"],
+                         default: "latest")
+          packager.option_set('latest', version == 'latest')
+          packager.options_setup!
+        end
 
         if ask_setup_conf_file? packager.buildizer_conf_path
           build_type = ask("build_type", limited_to: ["patch", "native", "fpm"])

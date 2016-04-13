@@ -89,11 +89,7 @@ module Buildizer
     end
 
     def buildizer_conf_setup!
-      with_log(desc: buildizer_conf_path.to_s) do |&fin|
-        recreate = buildizer_conf_path.exist?
-        buildizer_conf_path.write YAML.dump(buildizer_conf)
-        fin.call recreate ? "UPDATED" : "CREATED"
-      end
+      write_path(buildizer_conf_path, YAML.dump(buildizer_conf))
     end
 
 
@@ -110,15 +106,18 @@ module Buildizer
     end
 
     def options_setup!
-      with_log(desc: options_path.to_s) do |&fin|
-        recreate = options_path.exist?
-        options_path.write YAML.dump(options)
-        fin.call recreate ? "UPDATED" : "CREATED"
-      end
-
+      write_path(options_path, YAML.dump(options))
       @options = nil
     end
 
+
+    def write_path(path, value)
+      with_log(desc: path.to_s) do |&fin|
+        recreate = path.exist?
+        path.write value
+        fin.call recreate ? "UPDATED" : "CREATED"
+      end
+    end
 
     def with_log(desc: nil, &blk)
       $stdout.write("File #{desc} ... ") if desc
