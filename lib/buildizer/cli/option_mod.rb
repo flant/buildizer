@@ -29,10 +29,6 @@ module Buildizer
             method_option name, options
           end
         end
-
-        def construct_packager(options)
-          Buildizer::Packager.new(options: {'latest' => options['latest']}, debug: options['debug'])
-        end
       end # ClassMethods
     end # OptionMod
   end # Cli
