@@ -20,24 +20,6 @@ module Buildizer
       @ci = _construct_ci
     end
 
-    def _construct_ci
-      res = raw_command! 'git config --get remote.origin.url'
-      git_remote = res.stdout.strip
-      if git_remote.start_with? 'http://'
-        git_url = git_remote.split('http://', 2).last
-      elsif git_remote.start_with? 'https://'
-        git_url = git_remote.split('https://', 2).last
-      else
-        git_url = git_remote.split('@', 2).last
-      end
-
-      if git_url and git_url.start_with? 'github'
-        Ci::Travis.new(self)
-      elsif git_url and git_url.start_with? 'gitlab'
-        Ci::GitlabCi.new(self)
-      end
-    end
-
     def initialized?
       options_path.exist?
     end
@@ -288,6 +270,26 @@ git add -v .travis.yml
 
     def raw_command!(*args, **kwargs)
       raw_command(*args, do_raise: true, **kwargs)
+    end
+
+    private
+
+    def _construct_ci
+      res = raw_command! 'git config --get remote.origin.url'
+      git_remote = res.stdout.strip
+      if git_remote.start_with? 'http://'
+        git_url = git_remote.split('http://', 2).last
+      elsif git_remote.start_with? 'https://'
+        git_url = git_remote.split('https://', 2).last
+      else
+        git_url = git_remote.split('@', 2).last
+      end
+
+      if git_url and git_url.start_with? 'github'
+        Ci::Travis.new(self)
+      elsif git_url and git_url.start_with? 'gitlab'
+        Ci::GitlabCi.new(self)
+      end
     end
   end # Packager
 end # Buildizer

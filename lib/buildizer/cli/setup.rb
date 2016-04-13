@@ -18,7 +18,10 @@ module Buildizer
         end
 
         if ask_setup_conf_file? packager.buildizer_conf_path
-          build_type = ask("build_type", limited_to: ["patch", "native", "fpm"])
+          default_build_type = packager.buildizer_conf['build_type']
+          build_type = ask("build_type",
+                            limited_to: ["patch", "native", "fpm"],
+                            default: default_build_type)
           packager.buildizer_conf_update('build_type' => build_type)
           packager.buildizer_conf_setup!
         end
