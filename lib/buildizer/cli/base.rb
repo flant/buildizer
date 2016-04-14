@@ -9,8 +9,10 @@ module Buildizer
 
       class << self
         def construct_packager(options)
-          Buildizer::Packager.new(options: {'latest' => options['latest'],
-                                            'ci' => options['ci']}, debug: options['debug'])
+          opts = options.select do |k, v|
+            _stored_options.key? k.to_sym
+          end
+          Buildizer::Packager.new(options: opts, debug: options['debug'])
         end
       end # << self
     end # Base
