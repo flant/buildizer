@@ -13,7 +13,7 @@ module Buildizer
         no_commands do
           def ask_setup?
             (not ci.configuration_actual?) and
-              ask_yes_no?("Configuration change needed for #{ci.ci_name}. Do setup?", default: true)
+              ask_yes_no?("Do setup #{ci.ci_name} configuration?", default: true)
           end
         end # no_commands
       end # Base

@@ -23,6 +23,7 @@ module Buildizer
                          limited_to: ["0.0.7", "latest"],
                          default: ((packager.options['latest'] == false) ? '0.0.7' : "latest"))
           packager.option_set('latest', version == 'latest')
+          packager.option_set('ci', packager.ci.ci_name)
           packager.options_setup!
         end
 
@@ -37,7 +38,7 @@ module Buildizer
 
         packager.ci.setup! if packager.ci.cli.ask_setup?
 
-        if ask_yes_no?("Do setup overcommit?", default: true)
+        if packager.git_available? and ask_yes_no?("Do setup overcommit?", default: true)
           packager.overcommit_setup!
           packager.overcommit_verify_setup!
           packager.overcommit_ci_setup!

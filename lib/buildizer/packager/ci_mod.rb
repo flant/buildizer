@@ -5,19 +5,18 @@ module Buildizer
 
       def _construct_ci
         unless ci_name = options['ci']
-          res = raw_command 'git config --get remote.origin.url'
-          git_remote = res.stdout.strip
+          git_remote = git_remote_url.to_s
           if git_remote.start_with? 'http://'
-            git_url = git_remote.split('http://', 2).last
+            git_host = git_remote.split('http://', 2).last
           elsif git_remote.start_with? 'https://'
-            git_url = git_remote.split('https://', 2).last
+            git_host = git_remote.split('https://', 2).last
           else
-            git_url = git_remote.split('@', 2).last
+            git_host = git_remote.split('@', 2).last
           end
 
-          if git_url and git_url.start_with? 'github'
+          if git_host and git_host.start_with? 'github'
             ci_name = 'travis'
-          elsif git_url and git_url.start_with? 'gitlab'
+          elsif git_host and git_host.start_with? 'gitlab'
             ci_name = 'gitlab-ci'
           else
             raise Error, error: :input_error,
