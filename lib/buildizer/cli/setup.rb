@@ -4,20 +4,25 @@ module Buildizer
       include OptionMod
       include HelperMod
 
+      add_stored_options(
+        ci: {type: :string, default: nil,
+             desc: "explicitly set ci to use (auto detect by default based on git remote url)"},
+        latest: {type: :boolean, default: nil,
+                 desc: "use latest buildizer from github in ci"},
+      )
+
       desc "all", "Setup buildizer"
       shared_options
-      method_option :ci, type: :string, default: nil,
-                         desc: "explicitly set ci to use " +
-                               "(auto detect by default based on git remote url)"
+      stored_option :ci
+      stored_option :latest
       def all
         packager = self.class.construct_packager(options)
 
         if ask_setup_conf_file? packager.options_path
           version = ask("Buildizer version to use in #{packager.ci.ci_name}",
                          limited_to: ["0.0.7", "latest"],
-                         default: "latest")
+                         default: ((packager.options['latest'] == false) ? '0.0.7' : "latest"))
           packager.option_set('latest', version == 'latest')
-          packager.option_set('ci', packager.ci.ci_name)
           packager.options_setup!
         end
 
@@ -41,6 +46,8 @@ module Buildizer
 
       desc "ci", "Setup buildizer ci configuration"
       shared_options
+      stored_option :ci
+      stored_option :latest
       method_option :verify, type: :boolean, default: false,
                              desc: "only verify ci configuration is up to date"
       def ci

@@ -21,7 +21,7 @@ module Buildizer
             ci_name = 'gitlab-ci'
           else
             raise Error, error: :input_error,
-                         message: "unable to determine ci to use (use --ci setup option)"
+                         message: "unable to determine ci to use (use --ci stored option)"
           end
         end
 
