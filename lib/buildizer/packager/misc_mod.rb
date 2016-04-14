@@ -17,7 +17,10 @@ module Buildizer
         Mixlib::ShellOut.new(*args, **kwargs).tap do |cmd|
           cmd.run_command
           if not cmd.status.success? and do_raise
-            raise Error.new(error: :error, message: "external command error: #{cmd.stdout + cmd.stderr}")
+            raise Error.new(error: :error,
+                            message: "external command error: " +
+                                     "#{args.join(' ')} => " +
+                                     "#{cmd.stdout + cmd.stderr}")
           end
         end
       end
@@ -27,7 +30,7 @@ module Buildizer
       end
 
       def write_path(path, value)
-        with_log(desc: path.to_s) do |&fin|
+        with_log(desc: "Write path #{path}") do |&fin|
           recreate = path.exist?
           path.write value
           fin.call recreate ? "UPDATED" : "CREATED"
@@ -35,9 +38,9 @@ module Buildizer
       end
 
       def with_log(desc: nil, &blk)
-        $stdout.write("File #{desc} ... ") if desc
+        puts("   #{desc}") if desc
         blk.call do |status|
-          $stdout.write("#{status.to_s}\n") if status
+          puts("=> #{desc} [#{status || 'DONE'}]") if desc
         end
       end
     end # MiscMod

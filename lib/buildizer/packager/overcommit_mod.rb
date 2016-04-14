@@ -20,24 +20,22 @@ module Buildizer
 
       def overcommit_conf_dump!
         write_path overcommit_conf_path, overcommit_conf_raw
+        command! 'overcommit --sign'
       end
 
       def overcommit_setup!
         overcommit_hooks_path.mkpath
         overcommit_conf_dump!
-        raw_command! 'overcommit --install'
+        command! 'overcommit --install'
       end
 
       def overcommit_verify_setup!
         hookcode = <<-HOOKCODE
-module Overcommit
-  module Hook
-    module PreCommit
-      class BuildizerVerify < Base
-        def run
-          %x{buildizer verify}
-        end
-      end
+module Overcommit::Hook::PreCommit
+  class BuildizerVerify < Base
+    def run
+      return :fail unless system("buildizer verify")
+      :pass
     end
   end
 end
@@ -46,12 +44,15 @@ end
         overcommit_hooks_pre_commit_path.mkpath
         path = overcommit_hooks_pre_commit_path.join('buildizer_verify.rb')
         write_path path, hookcode
+        command! 'overcommit --sign pre-commit'
 
         overcommit_conf['PreCommit'] ||= {}
-        overcommit_conf['PreCommit']['BuildizerVerify'] = {'enabled' => true, 'required' => true}
+        overcommit_conf['PreCommit']['BuildizerVerify'] = {
+          'enabled' => true,
+          'required' => true,
+          'desc' => "verify Buildizer conf file",
+        }
         overcommit_conf_dump!
-
-        raw_command! 'overcommit --sign pre-commit'
       end
 
       def overcommit_ci_setup!
