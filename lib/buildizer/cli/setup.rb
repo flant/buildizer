@@ -28,9 +28,24 @@ module Buildizer
 
         packager.ci.setup! if packager.ci.cli.ask_setup?
 
-        packager.overcommit_setup!
-        packager.overcommit_verify_setup!
-        packager.overcommit_ci_setup!
+        if ask_yes_no?("Do setup overcommit?", default: false)
+          packager.overcommit_setup!
+          packager.overcommit_verify_setup!
+          packager.overcommit_ci_setup!
+        end
+      end
+
+      desc "ci", "Setup buildizer ci configuration"
+      shared_options
+      method_option :verify, type: :boolean, default: false,
+                             desc: "only verify ci configuration is up to date"
+      def ci
+        packager = self.class.construct_packager(options)
+        if not options['verify']
+          packager.ci.setup!
+        elsif not packager.ci.configuration_actual?
+          raise Error, error: :error, message: "#{packager.ci.ci_name} confugration update needed"
+        end
       end
     end # Setup
   end # Cli

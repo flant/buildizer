@@ -41,21 +41,39 @@ module Overcommit::Hook::PreCommit
 end
         HOOKCODE
 
-        overcommit_hooks_pre_commit_path.mkpath
-        path = overcommit_hooks_pre_commit_path.join('buildizer_verify.rb')
-        write_path path, hookcode
-        command! 'overcommit --sign pre-commit'
-
-        overcommit_conf['PreCommit'] ||= {}
-        overcommit_conf['PreCommit']['BuildizerVerify'] = {
-          'enabled' => true,
-          'required' => true,
-          'desc' => "verify Buildizer conf file",
-        }
-        overcommit_conf_dump!
+        _overcommit_add_precommit!(:buildizer_verify, hookcode, desc: "Verify Buildizer conf file")
       end
 
       def overcommit_ci_setup!
+        hookcode = <<-HOOKCODE
+module Overcommit::Hook::PreCommit
+  class BuildizerCiVerify < Base
+    def run
+      return :fail unless system("buildizer setup ci --verify")
+      :pass
+    end
+  end
+end
+        HOOKCODE
+
+        _overcommit_add_precommit!(:buildizer_ci_verify, hookcode,
+                                   desc: "Verify #{ci.ci_name} configuration is up to date")
+      end
+
+      def _overcommit_add_precommit!(name, hookcode, desc: nil, required: true)
+        overcommit_hooks_pre_commit_path.mkpath
+        path = overcommit_hooks_pre_commit_path.join("#{name}.rb")
+        write_path path, hookcode
+        command! 'overcommit --sign pre-commit'
+
+        hook_name = name.to_s.split('_').map(&:capitalize).join
+        overcommit_conf['PreCommit'] ||= {}
+        overcommit_conf['PreCommit'][hook_name] = {}.tap do |hook|
+          hook['enabled'] = true
+          hook['required'] = required
+          hook['desc'] = desc if desc
+        end
+        overcommit_conf_dump!
       end
 
       module Initialize

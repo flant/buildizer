@@ -2,6 +2,15 @@ module Buildizer
   module Ci
     class Travis < Base
       def setup!
+        packager.write_path(conf_path, YAML.dump(actual_conf))
+        @conf = nil
+      end
+
+      def configuration_actual?
+        conf == actual_conf
+      end
+
+      def actual_conf
         install = [
           'sudo apt-get update',
           'sudo apt-get install -y apt-transport-https ca-certificates',
@@ -17,7 +26,7 @@ module Buildizer
         install.push(*Array(buildizer_install_instructions(latest: packager.options['latest'])))
 
         env = packager.targets.map {|t| "BUILDIZER_TARGET=#{t}"}
-        conf_raw = YAML.dump(conf.merge(
+        conf.merge(
           'dist' => 'trusty',
           'sudo' => 'required',
           'cache' => 'apt',
@@ -28,10 +37,7 @@ module Buildizer
           'script' => 'buildizer build',
           'env' => env,
           'after_success' => 'buildizer deploy',
-        ))
-        packager.write_path(conf_path, conf_raw)
-
-        @conf = nil
+        )
       end
 
       def _git_tag

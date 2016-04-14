@@ -10,6 +10,11 @@ module Buildizer
         )
         do_setup_conf_file == "yes"
       end
+
+      def ask_yes_no?(question, default: nil)
+        ask(question, limited_to: ["yes", "no"],
+                      default: (default.nil? ? "yes" : (default ? "yes" : "no"))) == "yes"
+      end
     end # HelperMod
   end # Cli
 end # Buildizer
