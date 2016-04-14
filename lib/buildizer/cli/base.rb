@@ -9,7 +9,8 @@ module Buildizer
 
       class << self
         def construct_packager(options)
-          Buildizer::Packager.new(options: {'latest' => options['latest']}, debug: options['debug'])
+          Buildizer::Packager.new(options: {'latest' => options['latest'],
+                                            'ci' => options['ci']}, debug: options['debug'])
         end
       end # << self
     end # Base

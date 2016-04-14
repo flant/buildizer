@@ -61,11 +61,6 @@ end
       end
 
       def _overcommit_add_precommit!(name, hookcode, desc: nil, required: true)
-        overcommit_hooks_pre_commit_path.mkpath
-        path = overcommit_hooks_pre_commit_path.join("#{name}.rb")
-        write_path path, hookcode
-        command! 'overcommit --sign pre-commit'
-
         hook_name = name.to_s.split('_').map(&:capitalize).join
         overcommit_conf['PreCommit'] ||= {}
         overcommit_conf['PreCommit'][hook_name] = {}.tap do |hook|
@@ -74,6 +69,11 @@ end
           hook['desc'] = desc if desc
         end
         overcommit_conf_dump!
+
+        overcommit_hooks_pre_commit_path.mkpath
+        path = overcommit_hooks_pre_commit_path.join("#{name}.rb")
+        write_path path, hookcode
+        command! 'overcommit --sign pre-commit'
       end
 
       module Initialize

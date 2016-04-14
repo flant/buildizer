@@ -19,8 +19,8 @@ module Buildizer
           if not cmd.status.success? and do_raise
             raise Error.new(error: :error,
                             message: "external command error: " +
-                                     "#{args.join(' ')} => " +
-                                     "#{cmd.stdout + cmd.stderr}")
+                                     [args.join(' '),
+                                      cmd.stdout + cmd.stderr].reject(&:empty?).join(' => '))
           end
         end
       end

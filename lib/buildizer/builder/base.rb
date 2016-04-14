@@ -95,7 +95,7 @@ module Buildizer
       def _required_params!(required_params, params)
         Array(required_params).each do |param|
           unless params[param] and not params[param].to_s.empty?
-            raise Error, error: :input_error, message: "#{param} is not defined"
+            raise Error, error: :input_error, message: "Buildizer #{param} is not defined"
           end
         end
       end
@@ -107,7 +107,7 @@ module Buildizer
       def verify
         targets.tap do |res|
           unless res.any?
-            raise Error, error: :input_error, message: "target is not defined"
+            raise Error, error: :input_error, message: "Buildizer target is not defined"
           end
         end
       end

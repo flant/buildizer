@@ -6,6 +6,9 @@ module Buildizer
 
       desc "all", "Setup buildizer"
       shared_options
+      method_option :ci, type: :string, default: nil,
+                         desc: "explicitly set ci to use " +
+                               "(auto detect by default based on git remote url)"
       def all
         packager = self.class.construct_packager(options)
 
@@ -14,6 +17,7 @@ module Buildizer
                          limited_to: ["0.0.7", "latest"],
                          default: "latest")
           packager.option_set('latest', version == 'latest')
+          packager.option_set('ci', packager.ci.ci_name)
           packager.options_setup!
         end
 
@@ -28,7 +32,7 @@ module Buildizer
 
         packager.ci.setup! if packager.ci.cli.ask_setup?
 
-        if ask_yes_no?("Do setup overcommit?", default: false)
+        if ask_yes_no?("Do setup overcommit?", default: true)
           packager.overcommit_setup!
           packager.overcommit_verify_setup!
           packager.overcommit_ci_setup!
