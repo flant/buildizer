@@ -3,7 +3,6 @@ module Buildizer
     class Travis < Base
       def setup!
         packager.write_path(conf_path, YAML.dump(actual_conf))
-        @conf = nil
       end
 
       def configuration_actual?
@@ -23,7 +22,7 @@ module Buildizer
 
           'echo "docker-engine hold" | sudo dpkg --set-selections',
         ]
-        install.push(*Array(buildizer_install_instructions(latest: packager.options['latest'])))
+        install.push(*Array(buildizer_install_instructions(master: packager.project_settings['master'])))
 
         env = packager.targets.map {|t| "BUILDIZER_TARGET=#{t}"}
         conf.merge(

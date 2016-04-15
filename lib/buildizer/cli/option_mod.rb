@@ -29,20 +29,6 @@ module Buildizer
             method_option name, options
           end
         end
-
-        def _stored_options
-          @_stored_options ||= {}
-        end
-
-        def add_stored_options(options)
-          _stored_options.merge! options
-        end
-
-        def stored_option(name)
-          name = name.to_sym
-          raise "no such stored option #{name}" unless desc = _stored_options[name]
-          method_option name, desc
-        end
       end # ClassMethods
     end # OptionMod
   end # Cli

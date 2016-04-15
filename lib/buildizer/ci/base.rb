@@ -48,8 +48,8 @@ module Buildizer
         raise
       end
 
-      def buildizer_install_instructions(latest: nil)
-        if latest
+      def buildizer_install_instructions(master: nil)
+        if master
           ['git clone https://github.com/flant/buildizer ~/buildizer',
            'echo "export BUNDLE_GEMFILE=~/buildizer/Gemfile" | tee -a ~/.bashrc',
            'export BUNDLE_GEMFILE=~/buildizer/Gemfile',

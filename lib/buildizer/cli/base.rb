@@ -7,14 +7,11 @@ module Buildizer
         debug: {type: :boolean, default: false, desc: "turn on live logging for external commands"},
       )
 
-      class << self
-        def construct_packager(options)
-          opts = options.select do |k, v|
-            _stored_options.key? k.to_sym
-          end
-          Buildizer::Packager.new(options: opts, debug: options['debug'])
+      no_commands do
+        def packager
+          @packager ||= Buildizer::Packager.new(self)
         end
-      end # << self
+      end # no_commands
     end # Base
   end # Cli
 end # Buildizer

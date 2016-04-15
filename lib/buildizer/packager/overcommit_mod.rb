@@ -3,8 +3,13 @@ module Buildizer
     module OvercommitMod
       using Refine
 
-      attr_reader :overcommit_conf_path
-      attr_reader :overcommit_hooks_path
+      def overcommit_conf_path
+        package_path.join('.overcommit.yml')
+      end
+
+      def overcommit_hooks_path
+        package_path.join('.git-hooks')
+      end
 
       def overcommit_hooks_pre_commit_path
         overcommit_hooks_path.join('pre_commit')
@@ -49,7 +54,7 @@ end
 module Overcommit::Hook::PreCommit
   class BuildizerCiVerify < Base
     def run
-      return :fail unless system("buildizer setup ci --verify")
+      return :fail unless system("buildizer setup --verify-ci")
       :pass
     end
   end
@@ -75,20 +80,6 @@ end
         write_path path, hookcode
         command! 'overcommit --sign pre-commit'
       end
-
-      module Initialize
-        def initialize(**kwargs)
-          super(**kwargs)
-          @overcommit_conf_path = package_path.join('.overcommit.yml')
-          @overcommit_hooks_path = package_path.join('.git-hooks')
-        end
-      end # Initialize
-
-      class << self
-        def included(base)
-          base.send(:prepend, Initialize)
-        end
-      end # << self
     end # OvercommitMod
   end # Packager
 end # Buildizer

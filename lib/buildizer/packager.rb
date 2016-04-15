@@ -3,31 +3,24 @@ module Buildizer
     using Refine
 
     include MiscMod
-    include OptionsMod
+    include ProjectSettingsMod
     include CiMod
     include ConfMod
     include GitMod
     include OvercommitMod
+    include PackagecloudMod
+    include DockerCacheMod
 
+    attr_reader :cli
     attr_reader :package_path
     attr_reader :work_path
     attr_reader :debug
 
-    def initialize(debug: false)
+    def initialize(cli)
+      @cli = cli
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
-      @debug = ENV['BUILDIZER_DEBUG'].nil? ? debug : ENV['BUILDIZER_DEBUG'].to_s.on?
-    end
-
-    def init!
-      raise Error, error: :logical_error, message: "already initialized" if initialized?
-
-      git_precommit_init!
-    end
-
-    def deinit!
-      raise Error, error: :logical_error, message: "not initialized" unless initialized?
-      git_precommit_deinit!
+      @debug = ENV['BUILDIZER_DEBUG'].nil? ? cli.options['debug'] : ENV['BUILDIZER_DEBUG'].to_s.on?
     end
 
     def prepare!
@@ -60,32 +53,6 @@ module Buildizer
 
     def git_old_precommit_path
       git_old_hooks_path.join('pre-commit')
-    end
-
-    def git_precommit_init!
-      if git_precommit_path.exist?
-        raise(Error,
-          error: :logical_error,
-          message: [
-            "unable to backup existing precommit script: ",
-            "file already exists: #{git_old_precommit_path}",
-          ].join) if git_old_precommit_path.exist?
-        git_old_hooks_path.mkpath
-        FileUtils.cp git_precommit_path, git_old_precommit_path
-      end
-
-      git_precommit_path.write <<-EOF
-#!/bin/bash
-buildizer update
-git add -v .travis.yml
-      EOF
-      git_precommit_path.chmod 0755
-    end
-
-    def git_precommit_deinit!
-      git_precommit_path.delete if git_precommit_path.exist?
-      FileUtils.cp git_old_precommit_path, git_precommit_path if git_old_precommit_path.exist?
-      git_old_hooks_path.rmtree if git_old_hooks_path.exist?
     end
 
     def builder

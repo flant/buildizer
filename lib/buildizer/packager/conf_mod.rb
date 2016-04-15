@@ -3,7 +3,9 @@ module Buildizer
     module ConfMod
       using Refine
 
-      attr_reader :buildizer_conf_path
+      def buildizer_conf_path
+        package_path.join('Buildizer')
+      end
 
       def buildizer_conf
         @buildizer_conf ||= buildizer_conf_path.load_yaml
@@ -105,19 +107,6 @@ module Buildizer
       def enabled?
         !!ci.git_tag
       end
-
-      module Initialize
-        def initialize(**kwargs)
-          super(**kwargs)
-          @buildizer_conf_path = package_path.join('Buildizer')
-        end
-      end # Initialize
-
-      class << self
-        def included(base)
-          base.send(:prepend, Initialize)
-        end
-      end # << self
     end # ConfMod
   end # Packager
 end # Buildizer
