@@ -15,7 +15,6 @@ module Buildizer
           raise(Error, message: "#{packager.ci.ci_name} confugration update needed") unless packager.ci.configuration_actual?
         else
           packager.project_settings_setup!
-          packager.buildizer_conf_setup!
           packager.ci.setup!
           packager.overcommit_setup!
           packager.overcommit_verify_setup!
