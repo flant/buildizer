@@ -12,7 +12,11 @@ module Buildizer
       def on?
         ['1', 'true', 'yes'].include? self.downcase
       end
-    end
+
+      def off?
+        !on?
+      end
+    end # String
 
     refine Pathname do
       def load_yaml
@@ -21,6 +25,18 @@ module Buildizer
         raise Error, error: :input_error,
                      message: "bad yaml config file #{self}: #{err.message}"
       end
-    end
+    end # Pathname
+
+    refine TrueClass do
+      def to_env
+        'yes'
+      end
+    end # TrueClass
+
+    refine FalseClass do
+      def to_env
+        'no'
+      end
+    end # FalseClass
   end # Refine
 end # Buildizer

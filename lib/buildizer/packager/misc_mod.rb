@@ -40,7 +40,7 @@ module Buildizer
       def with_log(desc: nil, &blk)
         puts("   #{desc}") if desc
         blk.call do |status|
-          puts("=> #{desc} [#{status || 'DONE'}]") if desc
+          puts("=> #{desc} [#{status || 'OK'}]") if desc
         end
       end
     end # MiscMod

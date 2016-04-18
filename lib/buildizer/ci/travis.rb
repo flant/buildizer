@@ -2,11 +2,14 @@ module Buildizer
   module Ci
     class Travis < Base
       autoload :PackagecloudMod, 'buildizer/ci/travis/packagecloud_mod'
+      autoload :RequireTagMod, 'buildizer/ci/travis/require_tag_mod'
 
       include PackagecloudMod
+      include RequireTagMod
 
       def setup!
         packager.write_path(conf_path, YAML.dump(actual_conf))
+        require_tag_setup!
       end
 
       def configuration_actual?
@@ -77,7 +80,7 @@ module Buildizer
             ::Travis.github_auth(packager.user_settings['travis']['github_token'])
             packager.user_settings_save! if reset_github_token
 
-            fin.call "OK: #{::Travis::User.current.name}"
+            fin.call "LOGGED IN AS #{::Travis::User.current.name}"
           end # with_log
 
           true
