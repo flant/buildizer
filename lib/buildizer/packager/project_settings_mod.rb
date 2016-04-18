@@ -15,8 +15,12 @@ module Buildizer
         end
       end
 
-      def project_settings_setup!
+      def project_settings_save!
         write_path(project_settings_path, YAML.dump(project_settings))
+      end
+
+      def project_settings_setup!
+        project_settings_save!
       end
     end # ProjectSettingsMod
   end # Packager

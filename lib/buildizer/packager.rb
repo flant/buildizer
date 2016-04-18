@@ -4,6 +4,7 @@ module Buildizer
 
     include MiscMod
     include ProjectSettingsMod
+    include UserSettingsMod
     include CiMod
     include ConfMod
     include GitMod

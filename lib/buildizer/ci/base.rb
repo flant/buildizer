@@ -27,10 +27,6 @@ module Buildizer
         self.class.ci_name
       end
 
-      def cli
-        @cli ||= Buildizer::Cli::Ci::Base.new(self)
-      end
-
       def setup!
         raise
       end
@@ -60,6 +56,10 @@ module Buildizer
         else
           'gem install buildizer'
         end
+      end
+
+      def packagecloud_setup!
+        raise
       end
 
       class << self
