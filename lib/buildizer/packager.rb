@@ -1,5 +1,15 @@
 module Buildizer
   class Packager
+    autoload :MiscMod, 'buildizer/packager/misc_mod'
+    autoload :ProjectSettingsMod, 'buildizer/packager/project_settings_mod'
+    autoload :UserSettingsMod, 'buildizer/packager/user_settings_mod'
+    autoload :CiMod, 'buildizer/packager/ci_mod'
+    autoload :ConfMod, 'buildizer/packager/conf_mod'
+    autoload :GitMod, 'buildizer/packager/git_mod'
+    autoload :OvercommitMod, 'buildizer/packager/overcommit_mod'
+    autoload :PackagecloudMod, 'buildizer/packager/packagecloud_mod'
+    autoload :DockerCacheMod, 'buildizer/packager/docker_cache_mod'
+
     using Refine
 
     include MiscMod

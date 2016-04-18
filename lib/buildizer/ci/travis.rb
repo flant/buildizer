@@ -1,6 +1,10 @@
 module Buildizer
   module Ci
     class Travis < Base
+      autoload :PackagecloudMod, 'buildizer/ci/travis/packagecloud_mod'
+
+      include PackagecloudMod
+
       def setup!
         packager.write_path(conf_path, YAML.dump(actual_conf))
       end
@@ -43,7 +47,7 @@ module Buildizer
         ENV['TRAVIS_TAG']
       end
 
-      def travis_repo_name
+      def repo_name
         packager.git_remote_url.split(':')[1].split('.')[0]
       rescue
         raise Error, error: :input_error,
@@ -51,82 +55,37 @@ module Buildizer
                               "from git remote url #{packager.git_remote_url}"
       end
 
-      def travis_repo
-        ::Travis::Repository.find(travis_repo_name)
+      def repo
+        ::Travis::Repository.find(repo_name)
       end
 
-      def travis_packagecloud_var_name
-        'PACKAGECLOUD'
-      end
+      def login
+        @logged_in ||= begin
+          packager.with_log(desc: "Login into travis") do |&fin|
+            packager.user_settings['travis'] ||= {}
 
-      def travis_packagecloud_var
-        travis_repo.env_vars[travis_packagecloud_var_name]
-      end
+            if packager.cli.options['reset_github_token']
+              packager.user_settings['travis'].delete('github_token')
+              packager.user_settings_save!
+            end
 
-      def travis_packagecloud_var_upsert(**kwargs)
-        travis_repo.env_vars.upsert(travis_packagecloud_var_name, kwargs.delete(:value), **kwargs)
-      end
+            packager.user_settings['travis']['github_token'] ||= begin
+              reset_github_token = true
+              packager.cli.ask("GitHub access token:", echo: false).tap{puts}
+            end
 
-      def travis_packagecloud_token_var_name(org: nil)
-        if org
-          "PACKAGECLOUD_TOKEN_#{org.upcase}"
-        else
-          'PACKAGECLOUD_TOKEN'
+            ::Travis.github_auth(packager.user_settings['travis']['github_token'])
+            packager.user_settings_save! if reset_github_token
+
+            fin.call "OK: #{::Travis::User.current.name}"
+          end # with_log
+
+          true
         end
       end
 
-      def travis_packagecloud_token_var(org: nil)
-        travis_repo.env_vars[travis_packagecloud_token_var_name(org: org)]
-      end
-
-      def travis_packagecloud_token_var_upsert(**kwargs)
-        travis_repo.env_vars.upsert(travis_packagecloud_token_var_name(org: kwargs.delete(:org)),
-                                    kwargs.delete(:value),
-                                    **kwargs)
-      end
-
-      def travis_packagecloud_repo_list
-        travis_packagecloud_var.value.split(',')
-      end
-
-      def packagecloud_setup!
-        with_travis do
-          packager.with_log(desc: "Travis packagecloud repo list") do |&fin|
-            travis_packagecloud_var_upsert(value: packager.packagecloud_repo_list.uniq.join(','),
-                                           public: true)
-            fin.call 'UPSERTED'
-          end # with_log
-
-          packager.packagecloud_org_desc_list.each do |desc|
-            next unless desc[:token]
-            packager.with_log(desc: "Travis packagecloud token for '#{desc[:org]}'") do |&fin|
-              travis_packagecloud_token_var_upsert(org: desc[:org], value: desc[:token], public: false)
-              fin.call 'UPSERTED'
-            end # with_log
-          end
-        end # with_travis
-      end
-
       def with_travis(&blk)
-        packager.with_log(desc: "Login into travis") do |&fin|
-          packager.user_settings['travis'] ||= {}
-
-          if packager.cli.options['reset_github_token']
-            packager.user_settings['travis'].delete('github_token')
-            packager.user_settings_save!
-          end
-
-          packager.user_settings['travis']['github_token'] ||= begin
-            reset_github_token = true
-            packager.cli.ask("GitHub access token:", echo: false).tap{puts}
-          end
-
-          ::Travis.github_auth(packager.user_settings['travis']['github_token'])
-          packager.user_settings_save! if reset_github_token
-
-          fin.call "OK: #{::Travis::User.current.name}"
-        end # with_log
-
+        login
         yield
       rescue ::Travis::Client::Error => err
         raise Error, message: "travis: #{err.message}"
