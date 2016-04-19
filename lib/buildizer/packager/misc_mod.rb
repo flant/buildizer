@@ -32,8 +32,17 @@ module Buildizer
       def write_path(path, value)
         with_log(desc: "Write path #{path}") do |&fin|
           recreate = path.exist?
-          path.write value
-          fin.call recreate ? "UPDATED" : "CREATED"
+          if path.exist?
+            if path.read == value
+              fin.call 'OK'
+            else
+              path.write value
+              fin.call 'UPDATED'
+            end
+          else
+            path.write value
+            fin.call 'CREATED'
+          end
         end
       end
 

@@ -80,7 +80,7 @@ module Buildizer
             ::Travis.github_auth(packager.user_settings['travis']['github_token'])
             packager.user_settings_save! if reset_github_token
 
-            fin.call "LOGGED IN AS #{::Travis::User.current.name}"
+            fin.call "LOGGED IN: #{::Travis::User.current.name}"
           end # with_log
 
           true

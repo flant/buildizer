@@ -1,6 +1,10 @@
 module Buildizer
   class Packager
     module PackagecloudMod
+      def packagecloud_setup?
+        !!cli.options['packagecloud']
+      end
+
       def packagecloud_repo_list
         Array(cli.options['packagecloud'])
       end
@@ -29,6 +33,8 @@ module Buildizer
       end
 
       def packagecloud_setup!
+        return unless packagecloud_setup?
+
         update_user_settings = false
         packagecloud_org_list.each do |org|
           if user_settings_packagecloud_token[org].nil? or
