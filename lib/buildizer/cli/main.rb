@@ -19,6 +19,8 @@ module Buildizer
                                                      "and enter new"
       method_option :require_tag, type: :boolean, default: nil,
                                   desc: "pass only git tagged commits for deploy stage"
+      method_option :docker_cache_user, type: :string, default: nil,
+                                  desc: ""
       def setup
         if options['verify_ci']
           raise(Error, message: "#{packager.ci.ci_name} confugration update needed") unless packager.ci.configuration_actual?

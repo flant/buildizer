@@ -62,15 +62,15 @@ module Buildizer
 
     def pull_image(image)
       builder.packager.command!("docker pull #{image.base_image}",
-                                desc: "Docker pull #{image.base_image}")
+                                 desc: "Docker pull #{image.base_image}")
 
       builder.packager.command("docker pull #{image.name}",
-                               desc: "Docker pull #{image.name}") if cache
+                                desc: "Docker pull #{image.name}") if cache
     end
 
     def push_image(image)
       builder.packager.command("docker push #{image.name}",
-                               desc: "Docker push #{image.name}") if cache
+                                desc: "Docker push #{image.name}") if cache
     end
 
     def build_image!(target)
@@ -78,7 +78,7 @@ module Buildizer
 
       target.image_work_path.join('Dockerfile').write [*target.image.instructions, nil].join("\n")
       builder.packager.command! "docker build -t #{target.image.name} #{target.image_work_path}",
-                                desc: "Docker build image #{target.image.name}"
+                                 desc: "Docker build image #{target.image.name}"
 
       push_image target.image
     end

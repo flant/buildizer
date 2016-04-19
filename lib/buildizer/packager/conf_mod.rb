@@ -63,10 +63,6 @@ module Buildizer
         buildizer_conf['docker_server']
       end
 
-      def docker_image
-        buildizer_conf['image']
-      end
-
       def package_cloud_repo
         ENV['PACKAGECLOUD'].to_s.split(',')
       end

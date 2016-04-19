@@ -62,7 +62,7 @@ module Buildizer
       end
 
       def docker_image_repository
-        "#{builder.packager.docker_image || "buildizer/#{package_name}"}"
+        "buildizer/#{package_name}"
       end
 
       def docker_image_tag
