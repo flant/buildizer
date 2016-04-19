@@ -13,6 +13,7 @@ module Buildizer
 
       def user_settings_save!
         write_path(user_settings_path, YAML.dump(user_settings))
+        user_settings_path.chmod(0600)
       end
 
       def user_settings_setup!
