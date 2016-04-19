@@ -170,7 +170,7 @@ module Buildizer
 
         packager.package_cloud_org.each do |org, token|
           unless token
-            warn "No packagecloud token defined for org '#{org}' " +
+            warn "No package cloud token defined for org '#{org}' " +
                  "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase}) [WARN]"
           end
         end

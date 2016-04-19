@@ -58,7 +58,11 @@ module Buildizer
         end
       end
 
-      def packagecloud_setup!
+      def package_cloud_setup!
+        raise
+      end
+
+      def docker_cache_setup!
         raise
       end
 

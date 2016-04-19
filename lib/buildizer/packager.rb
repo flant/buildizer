@@ -4,10 +4,11 @@ module Buildizer
     autoload :ProjectSettingsMod, 'buildizer/packager/project_settings_mod'
     autoload :UserSettingsMod, 'buildizer/packager/user_settings_mod'
     autoload :CiMod, 'buildizer/packager/ci_mod'
-    autoload :ConfMod, 'buildizer/packager/conf_mod'
+    autoload :BuildizerConfMod, 'buildizer/packager/buildizer_conf_mod'
+    autoload :PackageVersionTagMod, 'buildizer/packager/package_version_tag_mod'
     autoload :GitMod, 'buildizer/packager/git_mod'
     autoload :OvercommitMod, 'buildizer/packager/overcommit_mod'
-    autoload :PackagecloudMod, 'buildizer/packager/packagecloud_mod'
+    autoload :PackageCloudMod, 'buildizer/packager/package_cloud_mod'
     autoload :DockerCacheMod, 'buildizer/packager/docker_cache_mod'
 
     using Refine
@@ -16,10 +17,11 @@ module Buildizer
     include ProjectSettingsMod
     include UserSettingsMod
     include CiMod
-    include ConfMod
+    include BuildizerConfMod
+    include PackageVersionTagMod
     include GitMod
     include OvercommitMod
-    include PackagecloudMod
+    include PackageCloudMod
     include DockerCacheMod
 
     attr_reader :cli

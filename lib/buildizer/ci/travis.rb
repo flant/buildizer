@@ -1,10 +1,12 @@
 module Buildizer
   module Ci
     class Travis < Base
-      autoload :PackagecloudMod, 'buildizer/ci/travis/packagecloud_mod'
+      autoload :PackageCloudMod, 'buildizer/ci/travis/package_cloud_mod'
+      autoload :DockerCacheMod, 'buildizer/ci/travis/docker_cache_mod'
       autoload :RequireTagMod, 'buildizer/ci/travis/require_tag_mod'
 
-      include PackagecloudMod
+      include PackageCloudMod
+      include DockerCacheMod
       include RequireTagMod
 
       def setup!

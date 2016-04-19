@@ -73,6 +73,10 @@ module Buildizer
         "#{docker_image_repository}:#{docker_image_tag}"
       end
 
+      def docker_cache_image
+        "#{image.docker.cache[:repo]}:#{docker_image_tag}" if image.docker.cache
+      end
+
       def package_cloud
         @package_cloud.map do |desc|
           desc.merge(package_path: _package_cloud_path(desc[:repo]))

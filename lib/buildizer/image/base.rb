@@ -48,6 +48,10 @@ module Buildizer
         target.docker_image
       end
 
+      def cache_name
+        target.docker_cache_image
+      end
+
       def instruction(instruction, cmd)
         instructions << [instruction.to_s.upcase, cmd].join(' ')
       end

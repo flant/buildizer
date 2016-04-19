@@ -32,9 +32,9 @@ module Buildizer
 
     def with_cache(&blk)
       warn("No docker cache account settings " +
-           "(BUILDIZER_DOCKER_CACHE, BUILDIZER_DOCKER_CACHE_USERNAME, " +
-           "BUILDIZER_DOCKER_CACHE_PASSWORD, BUILDIZER_DOCKER_CACHE_EMAIL, " +
-           "BUILDIZER_DOCKER_CACHE_SERVER) [WARN]") unless cache
+           "(BUILDIZER_DOCKER_CACHE, BUILDIZER_DOCKER_CACHE_USERNAME," +
+           " BUILDIZER_DOCKER_CACHE_PASSWORD, BUILDIZER_DOCKER_CACHE_EMAIL," +
+           " BUILDIZER_DOCKER_CACHE_SERVER) [WARN]") unless cache
 
       cache_login! if cache
       begin
@@ -61,16 +61,30 @@ module Buildizer
     end
 
     def pull_image(image)
-      builder.packager.command!("docker pull #{image.base_image}",
-                                 desc: "Docker pull #{image.base_image}")
-
-      builder.packager.command("docker pull #{image.name}",
-                                desc: "Docker pull #{image.name}") if cache
+      builder.packager.command! "docker pull #{image.base_image}", desc: "Pull docker base image #{image.base_image}"
+      if cache
+        pull_cache_res = builder.packager.command(
+          "docker pull #{image.cache_name}",
+          desc: "Try to pull docker cache image #{image.cache_name}"
+        )
+        if pull_cache_res.status.success?
+          builder.packager.command! "docker tag -f #{image.cache_name} #{image.name}",
+                                     desc: "Tag cache image #{image.cache_name}" +
+                                           " as prepared build image #{image.name}"
+          builder.packager.command! "docker rmi #{image.cache_name}",
+                                     desc: "Remove cache image #{image.cache_name}"
+        end
+      end
     end
 
     def push_image(image)
-      builder.packager.command("docker push #{image.name}",
-                                desc: "Docker push #{image.name}") if cache
+      if cache
+        builder.packager.command! "docker tag -f #{image.name} #{image.cache_name}",
+                                   desc: "Tag prepared build image #{image.name}" +
+                                         " as cache image #{image.cache_name}"
+        builder.packager.command! "docker push #{image.cache_name}",
+                                   desc: "Push cache image #{image.cache_name}"
+      end
     end
 
     def build_image!(target)
@@ -78,7 +92,7 @@ module Buildizer
 
       target.image_work_path.join('Dockerfile').write [*target.image.instructions, nil].join("\n")
       builder.packager.command! "docker build -t #{target.image.name} #{target.image_work_path}",
-                                 desc: "Docker build image #{target.image.name}"
+                                 desc: "Build docker image #{target.image.name}"
 
       push_image target.image
     end
