@@ -31,7 +31,7 @@ module Buildizer
             with_travis do
               packager.with_log(desc: "Travis docker cache settings") do |&fin|
                 docker_cache_repo_var_update! packager.setup_docker_cache_repo, public: true
-                docker_cache_user_var_update! packager.setup_docker_cache_user, public: false
+                docker_cache_user_var_update! packager.setup_docker_cache_user, public: true
                 docker_cache_password_var_update! packager.setup_docker_cache_password, public: false
                 docker_cache_email_var_update! packager.setup_docker_cache_email, public: false
                 docker_cache_server_var_update! packager.setup_docker_cache_server, public: true
