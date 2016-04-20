@@ -1,11 +1,15 @@
 module Buildizer
   class Packager
     module MiscMod
-      def command(*args, do_raise: false, **kwargs)
-        Shellfold.run(*args, live_log: debug, **kwargs).tap do |cmd|
-          if not cmd.status.success? and do_raise
-            raise Error.new(error: :error, message: "external command error")
+      def command(*args, do_raise: false, log_failure: nil, **kwargs)
+        if debug
+          Shellfold.run(*args, log_failure: log_failure, **kwargs).tap do |cmd|
+            if not cmd.status.success? and do_raise
+              raise Error.new(error: :error, message: "external command error")
+            end
           end
+        else
+          raw_command(*args, do_raise: do_raise, **kwargs)
         end
       end
 
@@ -47,9 +51,9 @@ module Buildizer
       end
 
       def with_log(desc: nil, &blk)
-        puts("   #{desc}") if desc
+        puts("   #{desc}") if debug and desc
         blk.call do |status|
-          puts("=> #{desc} [#{status || 'OK'}]") if desc
+          puts("=> #{desc} [#{status || 'OK'}]") if debug and desc
         end
       end
     end # MiscMod
