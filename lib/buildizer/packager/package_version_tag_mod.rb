@@ -10,11 +10,6 @@ module Buildizer
       def package_version_tag
         ci.git_tag
       end
-
-      def enabled?
-        #FIXME: remove method
-        !!ci.git_tag
-      end
     end # PackageVersionTagMod
   end # Packager
 end # Buildizer

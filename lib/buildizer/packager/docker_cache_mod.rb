@@ -10,26 +10,26 @@ module Buildizer
          repo: repo}
       end
 
-      def docker_cache_settings
+      def user_settings_docker_cache
         user_settings['docker_cache'] ||= {}
       end
 
-      def docker_cache_org_settings(org)
-        docker_cache_settings['org'] ||= {}
-        docker_cache_settings['org'][org] ||= {}
+      def user_settings_docker_cache_org(org)
+        user_settings_docker_cache['org'] ||= {}
+        user_settings_docker_cache['org'][org] ||= {}
       end
 
-      def docker_cache_user_settings(user)
-        docker_cache_settings['user'] ||= {}
-        docker_cache_settings['user'][user] ||= {}
+      def user_settings_docker_cache_user(user)
+        user_settings_docker_cache['user'] ||= {}
+        user_settings_docker_cache['user'][user] ||= {}
       end
 
-      def docker_cache_org_user_list(org)
-        docker_cache_org_settings(org)['user'] ||= []
+      def user_settings_docker_cache_user_list(org)
+        user_settings_docker_cache_org(org)['user'] ||= []
       end
 
-      def docker_cache_org_repo_list(org)
-        docker_cache_org_settings(org)['repo'] ||= []
+      def user_settings_docker_cache_repo_list(org)
+        user_settings_docker_cache_org(org)['repo'] ||= []
       end
 
       def docker_cache_setup!
@@ -37,16 +37,16 @@ module Buildizer
         org, subname = repo.split('/')
 
         user = cli.options['docker_cache_user']
-        user = docker_cache_org_user_list(org).first unless user
+        user = user_settings_docker_cache_user_list(org).first unless user
         raise Error, error: :input_error,
                      message: "docker cache user required" unless user
         raise Error, error: :input_error,
                      message: "bad docker cache user" if user.empty?
 
         if email = cli.options['docker_cache_email']
-          docker_cache_user_settings(user)['email'] = email
+          user_settings_docker_cache_user(user)['email'] = email
         else
-          email = docker_cache_user_settings(user)['email']
+          email = user_settings_docker_cache_user(user)['email']
         end
         raise Error, error: :input_error,
                      message: 'docker cache email required' unless email
@@ -54,13 +54,13 @@ module Buildizer
                      message: "bad docker cache email" unless email =~ /.+@.+/
 
         if cli.options['reset_docker_cache_password'] or
-           (not password = docker_cache_user_settings(user)['password'])
+           (not password = user_settings_docker_cache_user(user)['password'])
           password = cli.ask("Docker cache user '#{user}' password:", echo: false).tap{puts}
-          docker_cache_user_settings(user)['password'] = password
+          user_settings_docker_cache_user(user)['password'] = password
         end
 
-        docker_cache_org_user_list(org).push(user) unless docker_cache_org_user_list(org).include? user
-        docker_cache_org_repo_list(org).push(repo) unless docker_cache_org_repo_list(org).include? repo
+        user_settings_docker_cache_user_list(org).push(user) unless user_settings_docker_cache_user_list(org).include? user
+        user_settings_docker_cache_repo_list(org).push(repo) unless user_settings_docker_cache_repo_list(org).include? repo
 
         user_settings_save!
 

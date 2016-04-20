@@ -21,14 +21,6 @@ module Buildizer
         end
       end
 
-      def package_cloud_setup?
-        !!cli.options['package_cloud']
-      end
-
-      def package_cloud_repo_list
-        Array(cli.options['package_cloud'])
-      end
-
       def user_settings_package_cloud
         user_settings['package_cloud'] ||= {}
       end
@@ -37,26 +29,34 @@ module Buildizer
         user_settings_package_cloud['token'] ||= {}
       end
 
-      def package_cloud_repo_desc_list
-        package_cloud_repo_list.map do |repo|
+      def setup_package_cloud_repo_list
+        Array(cli.options['package_cloud'])
+      end
+
+      def setup_package_cloud_repo_desc_list
+        setup_package_cloud_repo_list.map do |repo|
           org, name = repo.split('/')
           {repo: repo, org: org, name: name, token: user_settings_package_cloud_token[org]}
         end
       end
 
-      def package_cloud_org_desc_list
-        package_cloud_repo_desc_list.map {|desc| {org: desc[:org], token: desc[:token]}}.uniq
+      def setup_package_cloud_org_desc_list
+        setup_package_cloud_repo_desc_list.map {|desc| {org: desc[:org], token: desc[:token]}}.uniq
       end
 
-      def package_cloud_org_list
-        package_cloud_repo_desc_list.map {|desc| desc[:org]}.uniq
+      def setup_package_cloud_org_list
+        setup_package_cloud_repo_desc_list.map {|desc| desc[:org]}.uniq
+      end
+
+      def package_cloud_setup?
+        !!cli.options['package_cloud']
       end
 
       def package_cloud_setup!
         return unless package_cloud_setup?
 
         update_user_settings = false
-        package_cloud_org_list.each do |org|
+        setup_package_cloud_org_list.each do |org|
           if user_settings_package_cloud_token[org].nil? or
              cli.options['reset_package_cloud_token']
             token = cli.ask("Enter token for package_cloud org '#{org}':",
