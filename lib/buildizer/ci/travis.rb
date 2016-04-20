@@ -3,11 +3,11 @@ module Buildizer
     class Travis < Base
       autoload :PackageCloudMod, 'buildizer/ci/travis/package_cloud_mod'
       autoload :DockerCacheMod, 'buildizer/ci/travis/docker_cache_mod'
-      autoload :RequireTagMod, 'buildizer/ci/travis/require_tag_mod'
+      autoload :PackageVersionTagMod, 'buildizer/ci/travis/package_version_tag_mod'
 
       include PackageCloudMod
       include DockerCacheMod
-      include RequireTagMod
+      include PackageVersionTagMod
 
       def setup!
         packager.write_path(conf_path, YAML.dump(actual_conf))

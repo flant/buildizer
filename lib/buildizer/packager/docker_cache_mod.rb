@@ -3,11 +3,42 @@ module Buildizer
     module DockerCacheMod
       def docker_cache
         return unless repo = ENV['BUILDIZER_DOCKER_CACHE']
-        {username: ENV['BUILDIZER_DOCKER_CACHE_USERNAME'],
+        {user: ENV['BUILDIZER_DOCKER_CACHE_USERNAME'],
          password: ENV['BUILDIZER_DOCKER_CACHE_PASSWORD'],
          email: ENV['BUILDIZER_DOCKER_CACHE_EMAIL'],
          server: ENV['BUILDIZER_DOCKER_CACHE_SERVER'],
          repo: repo}
+      end
+
+      def setup_docker_cache_repo
+        cli.options['docker_cache']
+      end
+
+      def setup_docker_cache_org
+        setup_docker_cache_repo.split('/').first
+      end
+
+      def setup_docker_cache_user
+        cli.options['docker_cache_user'] || user_settings_docker_cache_user_list(setup_docker_cache_org).first
+      end
+
+      def setup_docker_cache_password
+        @setup_docker_cache_password ||= begin
+          settings_password = user_settings_docker_cache_user(setup_docker_cache_user)['password']
+          if cli.options['reset_docker_cache_password'] or settings_password.nil?
+            cli.ask("Docker cache user '#{setup_docker_cache_user}' password:", echo: false).tap{puts}
+          else
+            settings_password
+          end
+        end
+      end
+
+      def setup_docker_cache_email
+        cli.options['docker_cache_email'] || user_settings_docker_cache_user(setup_docker_cache_user)['email']
+      end
+
+      def setup_docker_cache_server
+        cli.options['docker_cache_server'] || user_settings_docker_cache_user(setup_docker_cache_user)['server']
       end
 
       def user_settings_docker_cache
@@ -32,37 +63,38 @@ module Buildizer
         user_settings_docker_cache_org(org)['repo'] ||= []
       end
 
+      def docker_cache_update_settings?
+        not setup_docker_cache_repo.nil?
+      end
+
+      def docker_cache_clear_settings?
+        cli.options['clear_docker_cache']
+      end
+
       def docker_cache_setup!
-        return unless repo = cli.options['docker_cache']
-        org, subname = repo.split('/')
+        if docker_cache_update_settings?
+          raise Error, error: :input_error,
+                       message: "docker cache user required" unless setup_docker_cache_user
+          raise Error, error: :input_error,
+                       message: "bad docker cache user" if setup_docker_cache_user.empty?
 
-        user = cli.options['docker_cache_user']
-        user = user_settings_docker_cache_user_list(org).first unless user
-        raise Error, error: :input_error,
-                     message: "docker cache user required" unless user
-        raise Error, error: :input_error,
-                     message: "bad docker cache user" if user.empty?
+          user_list = user_settings_docker_cache_user_list(setup_docker_cache_org)
+          user_list.push(setup_docker_cache_user) unless user_list.include? setup_docker_cache_user
 
-        if email = cli.options['docker_cache_email']
-          user_settings_docker_cache_user(user)['email'] = email
-        else
-          email = user_settings_docker_cache_user(user)['email']
+          raise Error, error: :input_error,
+                       message: 'docker cache email required' unless setup_docker_cache_email
+          raise Error, error: :input_error,
+                       message: "bad docker cache email" unless setup_docker_cache_email =~ /.+@.+/
+
+          user_settings_docker_cache_user(setup_docker_cache_user)['email'] = setup_docker_cache_email
+          user_settings_docker_cache_user(setup_docker_cache_user)['server'] = setup_docker_cache_server
+          user_settings_docker_cache_user(setup_docker_cache_user)['password'] = setup_docker_cache_password
+
+          repo_list = user_settings_docker_cache_repo_list(setup_docker_cache_org)
+          repo_list.push(setup_docker_cache_repo) unless repo_list.include? setup_docker_cache_repo
+
+          user_settings_save!
         end
-        raise Error, error: :input_error,
-                     message: 'docker cache email required' unless email
-        raise Error, error: :input_error,
-                     message: "bad docker cache email" unless email =~ /.+@.+/
-
-        if cli.options['reset_docker_cache_password'] or
-           (not password = user_settings_docker_cache_user(user)['password'])
-          password = cli.ask("Docker cache user '#{user}' password:", echo: false).tap{puts}
-          user_settings_docker_cache_user(user)['password'] = password
-        end
-
-        user_settings_docker_cache_user_list(org).push(user) unless user_settings_docker_cache_user_list(org).include? user
-        user_settings_docker_cache_repo_list(org).push(repo) unless user_settings_docker_cache_repo_list(org).include? repo
-
-        user_settings_save!
 
         ci.docker_cache_setup!
       end

@@ -38,7 +38,7 @@ module Buildizer
 
         def package_cloud_setup!
           with_travis do
-            packager.with_log(desc: "Travis package_cloud repo list") do |&fin|
+            packager.with_log(desc: "Travis package cloud repo list") do |&fin|
               package_cloud_var_upsert(value: packager.setup_package_cloud_repo_list.uniq.join(','),
                                        public: true)
               fin.call 'UPSERTED'
@@ -46,7 +46,7 @@ module Buildizer
 
             packager.setup_package_cloud_org_desc_list.each do |desc|
               next unless desc[:token]
-              packager.with_log(desc: "Travis package_cloud token for '#{desc[:org]}'") do |&fin|
+              packager.with_log(desc: "Travis package cloud token for '#{desc[:org]}'") do |&fin|
                 package_cloud_token_var_upsert(org: desc[:org], value: desc[:token], public: false)
                 fin.call 'UPSERTED'
               end # with_log

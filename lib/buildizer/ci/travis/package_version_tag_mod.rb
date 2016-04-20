@@ -1,7 +1,7 @@
 module Buildizer
   module Ci
     class Travis
-      module RequireTagMod
+      module PackageVersionTagMod
         using Refine
 
         def require_tag_var_name
@@ -36,7 +36,7 @@ module Buildizer
             end # with_log
           end # with_travis
         end
-      end # RequireTagMod
+      end # PackageVersionTagMod
     end # Travis
   end # Ci
 end # Buildizer

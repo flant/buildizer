@@ -49,7 +49,7 @@ module Buildizer
 
       cmd = ["docker login"]
       cmd << "--email=#{cache[:email]}" if cache[:email]
-      cmd << "--username=#{cache[:username]}" if cache[:username]
+      cmd << "--username=#{cache[:user]}" if cache[:user]
       cmd << "--password=#{cache[:password]}" if cache[:password]
       cmd << "--server=#{cache[:server]}" if cache[:server]
       builder.packager.command! cmd.join(' '), desc: "Docker cache account login"
