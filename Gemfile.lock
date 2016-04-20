@@ -8,7 +8,7 @@ GIT
 PATH
   remote: .
   specs:
-    buildizer (0.0.8)
+    buildizer (0.0.9)
       net_status (>= 0.0.1, < 1.0)
       overcommit (>= 0.33.0, < 1.0)
       package_cloud (>= 0.2, < 1.0)
