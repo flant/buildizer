@@ -34,6 +34,8 @@ module Buildizer
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
       @debug = ENV['BUILDIZER_DEBUG'].nil? ? cli.options['debug'] : ENV['BUILDIZER_DEBUG'].to_s.on?
+
+      work_path.mkpath
     end
 
     def prepare!
