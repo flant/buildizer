@@ -77,7 +77,11 @@ module Buildizer
       end
 
       def repo_name
-        packager.git_remote_url.split(':')[1].split('.')[0]
+        if packager.git_remote_url.start_with? 'http'
+          packager.git_remote_url.split('github.com/')[1]
+        else
+          packager.git_remote_url.split(':')[1].split('.')[0]
+        end
       rescue
         raise Error, error: :input_error,
                      message: "unable to determine travis repo name " +
