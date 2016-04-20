@@ -2,17 +2,13 @@ module Buildizer
   module Ci
     class Travis
       module PackageCloudMod
-        def package_cloud_var_name
-          'PACKAGECLOUD'
-        end
-
-        def package_cloud_var
-          repo.env_vars[package_cloud_var_name]
-        end
-
-        def package_cloud_var_upsert(**kwargs)
-          repo.env_vars.upsert(package_cloud_var_name, kwargs.delete(:value), **kwargs)
-        end
+        class << self
+          def included(base)
+            base.class_eval do
+              env_vars prefix: :package_cloud, repo_list: 'PACKAGECLOUD'
+            end # class_eval
+          end
+        end # << self
 
         def package_cloud_token_var_name(org: nil)
           if org
@@ -26,32 +22,53 @@ module Buildizer
           repo.env_vars[package_cloud_token_var_name(org: org)]
         end
 
-        def package_cloud_token_var_upsert(**kwargs)
-          repo.env_vars.upsert(package_cloud_token_var_name(org: kwargs.delete(:org)),
-                               kwargs.delete(:value),
-                               **kwargs)
+        def package_cloud_token_var_delete!(**kwargs)
+          var = package_cloud_token_var(**kwargs)
+          var.delete if var
         end
 
-        def setup_package_cloud_repo_list
-          package_cloud_var.value.split(',')
+        def package_cloud_token_var_update!(value, org: nil, **kwargs)
+          if value
+            repo.env_vars.upsert(package_cloud_token_var_name(org: org), value, **kwargs)
+          else
+            package_cloud_token_var_delete!(org: org)
+          end
         end
 
         def package_cloud_setup!
-          with_travis do
-            packager.with_log(desc: "Travis package cloud repo list") do |&fin|
-              package_cloud_var_upsert(value: packager.setup_package_cloud_repo_list.uniq.join(','),
-                                       public: true)
-              fin.call 'UPSERTED'
-            end # with_log
+          if packager.package_cloud_clear_settings?
+            with_travis do
+              repo_list = []
+              repo_list = package_cloud_repo_list_var.value.split(',') if package_cloud_repo_list_var
+              org_list = repo_list.map {|repo| repo.split('/').first}.uniq
+              org_list.each do |org|
+                packager.with_log(desc: "Travis package cloud token for '#{org}'") do |&fin|
+                  package_cloud_token_var_delete! org: org
+                  fin.call 'DELETED'
+                end
+              end
 
-            packager.setup_package_cloud_org_desc_list.each do |desc|
-              next unless desc[:token]
-              packager.with_log(desc: "Travis package cloud token for '#{desc[:org]}'") do |&fin|
-                package_cloud_token_var_upsert(org: desc[:org], value: desc[:token], public: false)
-                fin.call 'UPSERTED'
+              packager.with_log(desc: "Travis package cloud repo list") do |&fin|
+                package_cloud_repo_list_var_delete!
+                fin.call 'DELETED'
+              end
+            end # with_travis
+          elsif packager.package_cloud_update_settings?
+            with_travis do
+              packager.with_log(desc: "Travis package cloud repo list") do |&fin|
+                package_cloud_repo_list_var_update! packager.setup_package_cloud_repo_list.join(','), public: true
+                fin.call 'UPDATED'
               end # with_log
-            end
-          end # with_travis
+
+              packager.setup_package_cloud_org_desc_list.each do |desc|
+                next unless desc[:token]
+                packager.with_log(desc: "Travis package cloud token for '#{desc[:org]}'") do |&fin|
+                  package_cloud_token_var_update! desc[:token], org: desc[:org], public: false
+                  fin.call 'UPDATED'
+                end # with_log
+              end
+            end # with_travis
+          end
         end
       end # PackageCloudMod
     end # Travis

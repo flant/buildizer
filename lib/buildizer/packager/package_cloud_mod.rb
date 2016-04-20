@@ -30,7 +30,7 @@ module Buildizer
       end
 
       def setup_package_cloud_repo_list
-        Array(cli.options['package_cloud'])
+        Array(cli.options['package_cloud']).uniq
       end
 
       def setup_package_cloud_repo_desc_list
@@ -48,27 +48,31 @@ module Buildizer
         setup_package_cloud_repo_desc_list.map {|desc| desc[:org]}.uniq
       end
 
-      def package_cloud_setup?
-        !!cli.options['package_cloud']
+      def package_cloud_update_settings?
+        cli.options['package_cloud']
+      end
+
+      def package_cloud_clear_settings?
+        cli.options['clear_package_cloud']
       end
 
       def package_cloud_setup!
-        return unless package_cloud_setup?
-
-        update_user_settings = false
-        setup_package_cloud_org_list.each do |org|
-          if user_settings_package_cloud_token[org].nil? or
-             cli.options['reset_package_cloud_token']
-            token = cli.ask("Enter token for package_cloud org '#{org}':",
-                             echo: false, default: 'none').tap{puts}
-            token = (token == 'none' ? nil : token)
-            if user_settings_package_cloud_token[org] != token
-              user_settings_package_cloud_token[org] = token
-              update_user_settings = true
+        if package_cloud_update_settings?
+          update_user_settings = false
+          setup_package_cloud_org_list.each do |org|
+            if user_settings_package_cloud_token[org].nil? or
+               cli.options['reset_package_cloud_token']
+              token = cli.ask("Enter token for package_cloud org '#{org}':",
+                               echo: false, default: 'none').tap{puts}
+              token = (token == 'none' ? nil : token)
+              if user_settings_package_cloud_token[org] != token
+                user_settings_package_cloud_token[org] = token
+                update_user_settings = true
+              end
             end
           end
+          user_settings_save! if update_user_settings
         end
-        user_settings_save! if update_user_settings
 
         ci.package_cloud_setup!
       end

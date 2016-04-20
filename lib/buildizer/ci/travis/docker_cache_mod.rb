@@ -2,25 +2,17 @@ module Buildizer
   module Ci
     class Travis
       module DockerCacheMod
-        {repo: 'BUILDIZER_DOCKER_CACHE',
-         user: 'BUILDIZER_DOCKER_CACHE_USERNAME',
-         password: 'BUILDIZER_DOCKER_CACHE_PASSWORD',
-         email: 'BUILDIZER_DOCKER_CACHE_EMAIL',
-         server: 'BUILDIZER_DOCKER_CACHE_SERVER'}.each do |name, var_name|
-          define_method("docker_cache_#{name}_var") {repo.env_vars[var_name]}
-          define_method("docker_cache_#{name}_var_name") {var_name}
-          define_method("docker_cache_#{name}_var_delete!") do
-            var = send("docker_cache_#{name}_var")
-            var.delete if var
+        class << self
+          def included(base)
+            base.class_eval do
+              env_vars prefix: :docker_cache, repo: 'BUILDIZER_DOCKER_CACHE',
+                                              user: 'BUILDIZER_DOCKER_CACHE_USERNAME',
+                                              password: 'BUILDIZER_DOCKER_CACHE_PASSWORD',
+                                              email: 'BUILDIZER_DOCKER_CACHE_EMAIL',
+                                              server: 'BUILDIZER_DOCKER_CACHE_SERVER'
+            end # class_eval
           end
-          define_method("docker_cache_#{name}_var_update!") do |value, **kwargs|
-            if value
-              repo.env_vars.upsert(var_name, value, **kwargs)
-            else
-              send("docker_cache_#{name}_var_delete!")
-            end
-          end
-        end
+        end # << self
 
         def docker_cache_setup!
           if packager.docker_cache_clear_settings?

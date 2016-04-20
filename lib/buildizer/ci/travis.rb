@@ -1,6 +1,30 @@
 module Buildizer
   module Ci
     class Travis < Base
+      class << self
+        def ci_name
+          'travis'
+        end
+
+        def env_vars(prefix:, **kwargs)
+          kwargs.each do |name, var_name|
+            define_method("#{prefix}_#{name}_var") {repo.env_vars[var_name]}
+            define_method("#{prefix}_#{name}_var_name") {var_name}
+            define_method("#{prefix}_#{name}_var_delete!") do
+              var = send("#{prefix}_#{name}_var")
+              var.delete if var
+            end
+            define_method("#{prefix}_#{name}_var_update!") do |value, **kwargs|
+              if value
+                repo.env_vars.upsert(var_name, value, **kwargs)
+              else
+                send("#{prefix}_#{name}_var_delete!")
+              end
+            end
+          end # each
+        end
+      end # << self
+
       autoload :PackageCloudMod, 'buildizer/ci/travis/package_cloud_mod'
       autoload :DockerCacheMod, 'buildizer/ci/travis/docker_cache_mod'
       autoload :PackageVersionTagMod, 'buildizer/ci/travis/package_version_tag_mod'
@@ -95,12 +119,6 @@ module Buildizer
       rescue ::Travis::Client::Error => err
         raise Error, message: "travis: #{err.message}"
       end
-
-      class << self
-        def ci_name
-          'travis'
-        end
-      end # << self
     end # Travis
   end # Ci
 end # Buildizer
