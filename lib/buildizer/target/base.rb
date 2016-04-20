@@ -30,10 +30,6 @@ module Buildizer
         @maintainer = maintainer
 
         yield if block_given?
-
-        image_work_path.mkpath
-        image_build_path.mkpath
-        image_extra_path.mkpath
       end
 
       def image_work_path
@@ -62,7 +58,7 @@ module Buildizer
       end
 
       def docker_image_repository
-        "buildizer/#{package_name}"
+        package_name
       end
 
       def docker_image_tag

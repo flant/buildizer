@@ -1,5 +1,7 @@
 module Buildizer
   class Docker
+    using Refine
+
     attr_reader :builder
     attr_reader :cache
 
@@ -90,7 +92,7 @@ module Buildizer
     def build_image!(target)
       pull_image target.image
 
-      target.image_work_path.join('Dockerfile').write [*target.image.instructions, nil].join("\n")
+      target.image_work_path.join('Dockerfile').write! [*target.image.instructions, nil].join("\n")
       builder.packager.command! "docker build -t #{target.image.name} #{target.image_work_path}",
                                  desc: "Build docker image #{target.image.name}"
 
@@ -121,7 +123,7 @@ module Buildizer
       container = SecureRandom.uuid
       builder.packager.command! [
         "docker run --detach --name #{container}",
-        *Array(_common_docker_params(target, env)),
+        *Array(_prepare_docker_params(target, env)),
         _wrap_docker_run("while true ; do sleep 1 ; done"),
       ].join(' '), desc: "Run container '#{container}' from docker image '#{target.image.name}'"
       container
@@ -142,12 +144,15 @@ module Buildizer
     def run_in_image!(target:, cmd:, env: {}, desc: nil)
       builder.packager.command! [
         "docker run --rm",
-        *Array(_common_docker_params(target, env)),
+        *Array(_prepare_docker_params(target, env)),
         _wrap_docker_run(cmd),
       ].join(' '), timeout: 24*60*60, desc: desc
     end
 
-    def _common_docker_params(target, env)
+    def _prepare_docker_params(target, env)
+      target.image_extra_path.mkpath
+      target.image_build_path.mkpath
+
       [*env.map {|k,v| "-e #{k}=#{v}"},
        "-v #{builder.packager.package_path}:#{container_package_mount_path}:ro",
        "-v #{target.image_extra_path}:#{container_extra_path}:ro",

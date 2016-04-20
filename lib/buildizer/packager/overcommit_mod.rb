@@ -29,7 +29,6 @@ module Buildizer
       end
 
       def overcommit_setup!
-        overcommit_hooks_path.mkpath
         overcommit_conf_dump!
         command! 'overcommit --install'
       end
@@ -75,7 +74,6 @@ end
         end
         overcommit_conf_dump!
 
-        overcommit_hooks_pre_commit_path.mkpath
         path = overcommit_hooks_pre_commit_path.join("#{name}.rb")
         write_path path, hookcode
         command! 'overcommit --sign pre-commit'

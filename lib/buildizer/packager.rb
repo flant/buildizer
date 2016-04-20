@@ -34,8 +34,6 @@ module Buildizer
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
       @debug = ENV['BUILDIZER_DEBUG'].nil? ? cli.options['debug'] : ENV['BUILDIZER_DEBUG'].to_s.on?
-
-      work_path.mkpath
     end
 
     def prepare!
@@ -52,22 +50,6 @@ module Buildizer
 
     def verify!
       builder.verify
-    end
-
-    def git_hooks_path
-      package_path.join('.git').join('hooks')
-    end
-
-    def git_old_hooks_path
-      git_hooks_path.join('old-hooks')
-    end
-
-    def git_precommit_path
-      git_hooks_path.join('pre-commit')
-    end
-
-    def git_old_precommit_path
-      git_old_hooks_path.join('pre-commit')
     end
 
     def builder

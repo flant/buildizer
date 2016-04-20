@@ -9,10 +9,7 @@ module Buildizer
 
       def initialize(packager)
         @packager = packager
-
         @work_path = packager.work_path.join('builder').expand_path
-        work_path.mkpath
-
         @docker = Docker.new(self, cache: packager.docker_cache)
       end
 

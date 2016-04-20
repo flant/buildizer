@@ -1,6 +1,8 @@
 module Buildizer
   module Builder
     class Fpm < Base
+      using Refine
+
       FPM_SCRIPT_EVENTS = [:before, :after].map {|at|
                             [:install, :upgrade, :remove].map {|event|
                               "#{at}_#{event}"}}.flatten
@@ -75,7 +77,7 @@ module Buildizer
         end
 
         fpm_script.values.map do |desc|
-          desc[:file].write ["#!/bin/bash", *desc[:cmd], nil].join("\n")
+          desc[:file].write! ["#!/bin/bash", *desc[:cmd], nil].join("\n")
           desc[:file].chmod 0755
         end
 

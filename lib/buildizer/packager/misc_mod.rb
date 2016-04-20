@@ -1,6 +1,8 @@
 module Buildizer
   class Packager
     module MiscMod
+      using Refine
+
       def command(*args, do_raise: false, **kwargs)
         Shellfold.run(*args, live_log: debug, **kwargs).tap do |cmd|
           if not cmd.status.success? and do_raise
@@ -36,11 +38,11 @@ module Buildizer
             if path.read == value
               fin.call 'OK'
             else
-              path.write value
+              path.write! value
               fin.call 'UPDATED'
             end
           else
-            path.write value
+            path.write! value
             fin.call 'CREATED'
           end
         end
