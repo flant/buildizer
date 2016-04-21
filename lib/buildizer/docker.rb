@@ -34,7 +34,7 @@ module Buildizer
       builder.buildizer.warn "No docker cache account settings " +
                              "(BUILDIZER_DOCKER_CACHE, BUILDIZER_DOCKER_CACHE_USERNAME," +
                              " BUILDIZER_DOCKER_CACHE_PASSWORD, BUILDIZER_DOCKER_CACHE_EMAIL," +
-                             " BUILDIZER_DOCKER_CACHE_SERVER) [WARN]" unless cache
+                             " BUILDIZER_DOCKER_CACHE_SERVER)" unless cache
 
       cache_login! if cache
       begin

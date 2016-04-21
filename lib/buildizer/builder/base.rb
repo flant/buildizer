@@ -159,14 +159,14 @@ module Buildizer
           return
         elsif buildizer.package_cloud.empty?
           buildizer.warn "No package cloud settings " +
-                         "(PACKAGECLOUD, PACKAGECLOUD_TOKEN, PACKAGECLOUD_TOKEN_<ORG>) [WARN]"
+                         "(PACKAGECLOUD, PACKAGECLOUD_TOKEN, PACKAGECLOUD_TOKEN_<ORG>)"
           return
         end
 
         buildizer.package_cloud_org.each do |org, token|
           unless token
             buildizer.warn "No package cloud token defined for org '#{org}' " +
-                           "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase}) [WARN]"
+                           "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase})"
           end
         end
 
