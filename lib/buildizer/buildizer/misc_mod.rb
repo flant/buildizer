@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module MiscMod
       def command(*args, do_raise: false, **kwargs)
         Shellfold.run(*args, live_log: debug, **kwargs).tap do |cmd|
@@ -57,5 +57,5 @@ module Buildizer
         Kernel::warn msg.to_s.colorize(:yellow)
       end
     end # MiscMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

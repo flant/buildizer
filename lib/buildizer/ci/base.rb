@@ -1,12 +1,12 @@
 module Buildizer
   module Ci
     class Base
-      attr_reader :packager
+      attr_reader :buildizer
 
-      def initialize(packager)
+      def initialize(buildizer)
         super()
 
-        @packager = packager
+        @buildizer = buildizer
       end
 
       def conf
@@ -14,7 +14,7 @@ module Buildizer
       end
 
       def conf_path
-        packager.package_path.join(conf_file_name)
+        buildizer.package_path.join(conf_file_name)
       end
 
       def conf_file_name

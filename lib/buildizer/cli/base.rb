@@ -9,8 +9,8 @@ module Buildizer
       )
 
       no_commands do
-        def packager
-          @packager ||= Buildizer::Packager.new(self)
+        def buildizer
+          @buildizer ||= Buildizer::Buildizer.new(self)#.options.zymbolize_keys_deep)
         end
       end # no_commands
     end # Base

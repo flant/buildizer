@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module DockerCacheMod
       def docker_cache
         return unless repo = ENV['BUILDIZER_DOCKER_CACHE']
@@ -99,5 +99,5 @@ module Buildizer
         ci.docker_cache_setup!
       end
     end # DockerCacheMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

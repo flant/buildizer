@@ -34,7 +34,7 @@ module Buildizer
       include PackageVersionTagMod
 
       def setup!
-        packager.write_path(conf_path, YAML.dump(actual_conf))
+        buildizer.write_path(conf_path, YAML.dump(actual_conf))
         require_tag_setup!
       end
 
@@ -55,9 +55,9 @@ module Buildizer
 
           'echo "docker-engine hold" | sudo dpkg --set-selections',
         ]
-        install.push(*Array(buildizer_install_instructions(master: packager.project_settings['master'])))
+        install.push(*Array(buildizer_install_instructions(master: buildizer.project_settings['master'])))
 
-        env = packager.targets.map {|t| "BUILDIZER_TARGET=#{t}"}
+        env = buildizer.targets.map {|t| "BUILDIZER_TARGET=#{t}"}
         conf.merge(
           'dist' => 'trusty',
           'sudo' => 'required',
@@ -77,15 +77,15 @@ module Buildizer
       end
 
       def repo_name
-        if packager.git_remote_url.start_with? 'http'
-          packager.git_remote_url.split('github.com/')[1]
+        if buildizer.git_remote_url.start_with? 'http'
+          buildizer.git_remote_url.split('github.com/')[1]
         else
-          packager.git_remote_url.split(':')[1].split('.')[0]
+          buildizer.git_remote_url.split(':')[1].split('.')[0]
         end
       rescue
         raise Error, error: :input_error,
                      message: "unable to determine travis repo name " +
-                              "from git remote url #{packager.git_remote_url}"
+                              "from git remote url #{buildizer.git_remote_url}"
       end
 
       def repo
@@ -94,21 +94,21 @@ module Buildizer
 
       def login
         @logged_in ||= begin
-          packager.with_log(desc: "Login into travis") do |&fin|
-            packager.user_settings['travis'] ||= {}
+          buildizer.with_log(desc: "Login into travis") do |&fin|
+            buildizer.user_settings['travis'] ||= {}
 
-            if packager.cli.options['reset_github_token']
-              packager.user_settings['travis'].delete('github_token')
-              packager.user_settings_save!
+            if buildizer.cli.options['reset_github_token']
+              buildizer.user_settings['travis'].delete('github_token')
+              buildizer.user_settings_save!
             end
 
-            packager.user_settings['travis']['github_token'] ||= begin
+            buildizer.user_settings['travis']['github_token'] ||= begin
               reset_github_token = true
-              packager.cli.ask("GitHub access token:", echo: false).tap{puts}
+              buildizer.cli.ask("GitHub access token:", echo: false).tap{puts}
             end
 
-            ::Travis.github_auth(packager.user_settings['travis']['github_token'])
-            packager.user_settings_save! if reset_github_token
+            ::Travis.github_auth(buildizer.user_settings['travis']['github_token'])
+            buildizer.user_settings_save! if reset_github_token
 
             fin.call "LOGGED IN: #{::Travis::User.current.name}"
           end # with_log

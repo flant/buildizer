@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module CiMod
       def ci_name
         @ci_name ||= begin
@@ -23,5 +23,5 @@ module Buildizer
         end
       end
     end # CiMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

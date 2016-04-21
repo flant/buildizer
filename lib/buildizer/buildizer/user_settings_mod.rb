@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module UserSettingsMod
       def user_settings_path
         work_path.join('settings.yml')
@@ -18,5 +18,5 @@ module Buildizer
         user_settings_save!
       end
     end # UserSettingsMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

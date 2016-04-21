@@ -36,33 +36,33 @@ module Buildizer
         end
 
         def package_cloud_setup!
-          if packager.package_cloud_clear_settings?
+          if buildizer.package_cloud_clear_settings?
             with_travis do
               repo_list = []
               repo_list = package_cloud_repo_list_var.value.split(',') if package_cloud_repo_list_var
               org_list = repo_list.map {|repo| repo.split('/').first}.uniq
               org_list.each do |org|
-                packager.with_log(desc: "Travis package cloud token for '#{org}'") do |&fin|
+                buildizer.with_log(desc: "Travis package cloud token for '#{org}'") do |&fin|
                   package_cloud_token_var_delete! org: org
                   fin.call 'DELETED'
                 end
               end
 
-              packager.with_log(desc: "Travis package cloud repo list") do |&fin|
+              buildizer.with_log(desc: "Travis package cloud repo list") do |&fin|
                 package_cloud_repo_list_var_delete!
                 fin.call 'DELETED'
               end
             end # with_travis
-          elsif packager.package_cloud_update_settings?
+          elsif buildizer.package_cloud_update_settings?
             with_travis do
-              packager.with_log(desc: "Travis package cloud repo list") do |&fin|
-                package_cloud_repo_list_var_update! packager.setup_package_cloud_repo_list.join(','), public: true
+              buildizer.with_log(desc: "Travis package cloud repo list") do |&fin|
+                package_cloud_repo_list_var_update! buildizer.setup_package_cloud_repo_list.join(','), public: true
                 fin.call 'UPDATED'
               end # with_log
 
-              packager.setup_package_cloud_org_desc_list.each do |desc|
+              buildizer.setup_package_cloud_org_desc_list.each do |desc|
                 next unless desc[:token]
-                packager.with_log(desc: "Travis package cloud token for '#{desc[:org]}'") do |&fin|
+                buildizer.with_log(desc: "Travis package cloud token for '#{desc[:org]}'") do |&fin|
                   package_cloud_token_var_update! desc[:token], org: desc[:org], public: false
                   fin.call 'UPDATED'
                 end # with_log

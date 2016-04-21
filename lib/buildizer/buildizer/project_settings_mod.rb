@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module ProjectSettingsMod
       def project_settings_path
         package_path.join('.buildizer.yml')
@@ -21,5 +21,5 @@ module Buildizer
         project_settings_save!
       end
     end # ProjectSettingsMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

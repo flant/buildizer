@@ -1,15 +1,15 @@
 module Buildizer
-  class Packager
-    autoload :MiscMod, 'buildizer/packager/misc_mod'
-    autoload :ProjectSettingsMod, 'buildizer/packager/project_settings_mod'
-    autoload :UserSettingsMod, 'buildizer/packager/user_settings_mod'
-    autoload :CiMod, 'buildizer/packager/ci_mod'
-    autoload :BuildizerConfMod, 'buildizer/packager/buildizer_conf_mod'
-    autoload :PackageVersionTagMod, 'buildizer/packager/package_version_tag_mod'
-    autoload :GitMod, 'buildizer/packager/git_mod'
-    autoload :OvercommitMod, 'buildizer/packager/overcommit_mod'
-    autoload :PackageCloudMod, 'buildizer/packager/package_cloud_mod'
-    autoload :DockerCacheMod, 'buildizer/packager/docker_cache_mod'
+  class Buildizer
+    autoload :MiscMod, 'buildizer/buildizer/misc_mod'
+    autoload :ProjectSettingsMod, 'buildizer/buildizer/project_settings_mod'
+    autoload :UserSettingsMod, 'buildizer/buildizer/user_settings_mod'
+    autoload :CiMod, 'buildizer/buildizer/ci_mod'
+    autoload :BuildizerConfMod, 'buildizer/buildizer/buildizer_conf_mod'
+    autoload :PackageVersionTagMod, 'buildizer/buildizer/package_version_tag_mod'
+    autoload :GitMod, 'buildizer/buildizer/git_mod'
+    autoload :OvercommitMod, 'buildizer/buildizer/overcommit_mod'
+    autoload :PackageCloudMod, 'buildizer/buildizer/package_cloud_mod'
+    autoload :DockerCacheMod, 'buildizer/buildizer/docker_cache_mod'
 
     include MiscMod
     include ProjectSettingsMod
@@ -62,5 +62,5 @@ module Buildizer
         klass.new(self)
       end
     end
-  end # Packager
+  end # Buildizer
 end # Buildizer

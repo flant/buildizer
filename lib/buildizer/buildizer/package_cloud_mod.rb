@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module PackageCloudMod
       def package_cloud_repo
         ENV['PACKAGECLOUD'].to_s.split(',')
@@ -77,5 +77,5 @@ module Buildizer
         ci.package_cloud_setup!
       end
     end # PackageCloudMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

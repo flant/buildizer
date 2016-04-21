@@ -38,47 +38,47 @@ module Buildizer
                                          desc: "clear all docker cache settings"
       def setup
         if options['verify_ci']
-          raise(Error, message: "#{packager.ci.ci_name} confugration update needed") unless packager.ci.configuration_actual?
+          raise(Error, message: "#{buildizer.ci.ci_name} confugration update needed") unless buildizer.ci.configuration_actual?
         else
-          packager.project_settings_setup!
-          packager.user_settings_setup!
-          packager.ci.setup!
-          packager.package_cloud_setup!
-          packager.docker_cache_setup!
-          packager.overcommit_setup!
-          packager.overcommit_verify_setup!
-          packager.overcommit_ci_setup!
+          buildizer.project_settings_setup!
+          buildizer.user_settings_setup!
+          buildizer.ci.setup!
+          buildizer.package_cloud_setup!
+          buildizer.docker_cache_setup!
+          buildizer.overcommit_setup!
+          buildizer.overcommit_verify_setup!
+          buildizer.overcommit_ci_setup!
         end
       end
 
       desc "deinit", "Deinitialize settings (.buildizer.yml, git pre-commit hook)"
       shared_options
       def deinit
-        packager.deinit!
+        buildizer.deinit!
       end
 
       desc "prepare", "Prepare images for building packages"
       shared_options
       def prepare
-        packager.prepare!
+        buildizer.prepare!
       end
 
       desc "build", "Build packages"
       shared_options
       def build
-        packager.build!
+        buildizer.build!
       end
 
       desc "deploy", "Deploy packages"
       shared_options
       def deploy
-        packager.deploy!
+        buildizer.deploy!
       end
 
       desc "verify", "Verify targets params"
       shared_options
       def verify
-        packager.verify!
+        buildizer.verify!
       end
     end # Main
   end # Cli

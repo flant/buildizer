@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module GitMod
       def git_available?
         res = raw_command 'git status'
@@ -12,5 +12,5 @@ module Buildizer
         res.stdout.strip
       end
     end # GitMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

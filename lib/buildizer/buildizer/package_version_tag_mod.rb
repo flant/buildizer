@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module PackageVersionTagMod
       def package_version_tag_required_for_deploy?
         ENV['BUILDIZER_REQUIRE_TAG'].to_s.on?
@@ -9,5 +9,5 @@ module Buildizer
         ci.git_tag
       end
     end # PackageVersionTagMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

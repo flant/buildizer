@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module BuildizerConfMod
       def buildizer_conf_path
         package_path.join('Buildizer')
@@ -57,5 +57,5 @@ module Buildizer
         buildizer_conf['maintainer']
       end
     end # BuildizerConfMod
-  end # Packager
+  end # Buildizer
 end # Buildizer

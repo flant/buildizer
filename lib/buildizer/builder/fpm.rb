@@ -15,15 +15,15 @@ module Buildizer
 
       def initial_target_params
         super.tap do |params|
-          params[:fpm_script] = Array(packager.buildizer_conf['fpm_script'])
-          params[:fpm_config_files] = packager.buildizer_conf['fpm_config_files'].to_h
-          params[:fpm_files] = packager.buildizer_conf['fpm_files'].to_h
-          params[:fpm_conflicts] = Array(packager.buildizer_conf['fpm_conflicts'])
-          params[:fpm_replaces] = Array(packager.buildizer_conf['fpm_replaces'])
-          params[:fpm_provides] = Array(packager.buildizer_conf['fpm_provides'])
-          params[:fpm_depends] = Array(packager.buildizer_conf['fpm_depends'])
-          params[:fpm_description] = packager.buildizer_conf['fpm_description']
-          params[:fpm_url] = packager.buildizer_conf['fpm_url']
+          params[:fpm_script] = Array(buildizer.buildizer_conf['fpm_script'])
+          params[:fpm_config_files] = buildizer.buildizer_conf['fpm_config_files'].to_h
+          params[:fpm_files] = buildizer.buildizer_conf['fpm_files'].to_h
+          params[:fpm_conflicts] = Array(buildizer.buildizer_conf['fpm_conflicts'])
+          params[:fpm_replaces] = Array(buildizer.buildizer_conf['fpm_replaces'])
+          params[:fpm_provides] = Array(buildizer.buildizer_conf['fpm_provides'])
+          params[:fpm_depends] = Array(buildizer.buildizer_conf['fpm_depends'])
+          params[:fpm_description] = buildizer.buildizer_conf['fpm_description']
+          params[:fpm_url] = buildizer.buildizer_conf['fpm_url']
         end
       end
 

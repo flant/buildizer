@@ -1,14 +1,14 @@
 module Buildizer
   module Builder
     class Base
-      attr_reader :packager
+      attr_reader :buildizer
       attr_reader :work_path
       attr_reader :docker
 
-      def initialize(packager)
-        @packager = packager
-        @work_path = packager.work_path.join('builder').expand_path
-        @docker = Docker.new(self, cache: packager.docker_cache)
+      def initialize(buildizer)
+        @buildizer = buildizer
+        @work_path = buildizer.work_path.join('builder').expand_path
+        @docker = Docker.new(self, cache: buildizer.docker_cache)
       end
 
       def build_type
@@ -31,7 +31,7 @@ module Buildizer
         image = docker.new_image(os_name, os_version)
 
         params = initial_target_params
-        packager.buildizer_conf.each do |match_key, match_params|
+        buildizer.buildizer_conf.each do |match_key, match_params|
           match_os_name, match_os_version, match_target_tag = match_key.to_s.split('/', 3)
           if image.os_name.match_glob?(match_os_name) and
             ( match_os_version.nil? or image.os_version.match_glob?(match_os_version) ) and
@@ -49,18 +49,18 @@ module Buildizer
       end
 
       def targets
-        @targets ||= packager.targets.map {|target_name| new_target(target_name)}
+        @targets ||= buildizer.targets.map {|target_name| new_target(target_name)}
       end
 
       def initial_target_params
         {}.tap do |params|
-          params[:package_name] = packager.package_name
-          params[:package_version] = packager.package_version
-          params[:package_cloud] = packager.package_cloud
-          params[:prepare] = packager.prepare
-          params[:build_dep] = packager.build_dep
-          params[:before_build] = packager.before_build
-          params[:maintainer] = packager.maintainer
+          params[:package_name] = buildizer.package_name
+          params[:package_version] = buildizer.package_version
+          params[:package_cloud] = buildizer.package_cloud
+          params[:prepare] = buildizer.prepare
+          params[:build_dep] = buildizer.build_dep
+          params[:before_build] = buildizer.before_build
+          params[:maintainer] = buildizer.maintainer
         end
       end
 
@@ -109,13 +109,13 @@ module Buildizer
 
       def prepare
         docker.with_cache do
-          packager.before_prepare
-                  .each {|cmd| packager.command! cmd, desc: "Before prepare command: #{cmd}"}
+          buildizer.before_prepare
+                   .each {|cmd| buildizer.command! cmd, desc: "Before prepare command: #{cmd}"}
 
           targets.each {|target| prepare_target_image(target)}
 
-          packager.after_prepare
-                  .each {|cmd| packager.command! cmd, desc: "After prepare command: #{cmd}"}
+          buildizer.after_prepare
+                   .each {|cmd| buildizer.command! cmd, desc: "After prepare command: #{cmd}"}
         end # with_cache
       end
 
@@ -153,27 +153,27 @@ module Buildizer
       end
 
       def deploy
-        if packager.package_version_tag_required_for_deploy? and
-           not packager.package_version_tag
+        if buildizer.package_version_tag_required_for_deploy? and
+           not buildizer.package_version_tag
           puts "package_version_tag (env TRAVIS_TAG or CI_BUILD_TAG) required: ignoring deploy"
           return
-        elsif packager.package_cloud.empty?
-          packager.warn "No package cloud settings " +
-                        "(PACKAGECLOUD, PACKAGECLOUD_TOKEN, PACKAGECLOUD_TOKEN_<ORG>) [WARN]"
+        elsif buildizer.package_cloud.empty?
+          buildizer.warn "No package cloud settings " +
+                         "(PACKAGECLOUD, PACKAGECLOUD_TOKEN, PACKAGECLOUD_TOKEN_<ORG>) [WARN]"
           return
         end
 
-        packager.package_cloud_org.each do |org, token|
+        buildizer.package_cloud_org.each do |org, token|
           unless token
-            packager.warn "No package cloud token defined for org '#{org}' " +
-                          "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase}) [WARN]"
+            buildizer.warn "No package cloud token defined for org '#{org}' " +
+                           "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase}) [WARN]"
           end
         end
 
         targets.map do |target|
           target.tap do
-            if packager.package_version_tag_required_for_deploy? and
-               packager.package_version_tag != target.package_version_tag
+            if buildizer.package_version_tag_required_for_deploy? and
+               buildizer.package_version_tag != target.package_version_tag
               raise(Error, error: :logical_error,
                            message: "#{target.package_version_tag_param_name} and "+
                                     "package_version_tag (env TRAVIS_TAG or CI_BUILD_TAG) " +
@@ -195,12 +195,12 @@ module Buildizer
                     )
                   end
                 }.flatten.each {|desc|
-                  packager.command desc[:yank],
+                  buildizer.command desc[:yank],
                     desc: ["Package cloud yank package '#{desc[:package]}'",
                            " of target '#{target.name}'"].join,
                     environment: {'PACKAGECLOUD_TOKEN' => desc[:token]}
 
-                  packager.command desc[:push],
+                  buildizer.command desc[:push],
                     desc: ["Package cloud push package '#{desc[:package]}'",
                            " of target '#{target.name}'"].join,
                     environment: {'PACKAGECLOUD_TOKEN' =>desc[:token]}

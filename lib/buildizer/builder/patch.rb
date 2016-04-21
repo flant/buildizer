@@ -11,8 +11,8 @@ module Buildizer
 
       def initial_target_params
         super.tap do |params|
-          params[:patch] = Array(packager.buildizer_conf['patch'])
-          params[:patch_version] = packager.buildizer_conf['patch_version']
+          params[:patch] = Array(buildizer.buildizer_conf['patch'])
+          params[:patch_version] = buildizer.buildizer_conf['patch_version']
         end
       end
 

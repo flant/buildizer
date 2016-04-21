@@ -1,5 +1,5 @@
 module Buildizer
-  class Packager
+  class Buildizer
     module OvercommitMod
       def overcommit_conf_path
         package_path.join('.overcommit.yml')
@@ -77,5 +77,5 @@ end
         command! 'overcommit --sign pre-commit'
       end
     end # OvercommitMod
-  end # Packager
+  end # Buildizer
 end # Buildizer
