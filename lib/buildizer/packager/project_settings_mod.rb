@@ -1,8 +1,6 @@
 module Buildizer
   class Packager
     module ProjectSettingsMod
-      using Refine
-
       def project_settings_path
         package_path.join('.buildizer.yml')
       end

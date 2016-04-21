@@ -1,7 +1,5 @@
 module Buildizer
   class Docker
-    using Refine
-
     attr_reader :builder
     attr_reader :cache
 

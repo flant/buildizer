@@ -1,8 +1,6 @@
 module Buildizer
   class Packager
     module MiscMod
-      using Refine
-
       def command(*args, do_raise: false, **kwargs)
         Shellfold.run(*args, live_log: debug, **kwargs).tap do |cmd|
           if not cmd.status.success? and do_raise
@@ -55,7 +53,6 @@ module Buildizer
         end
       end
 
-      using Refine
       def warn(msg)
         Kernel::warn msg.to_s.colorize(:yellow)
       end

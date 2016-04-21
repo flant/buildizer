@@ -1,8 +1,6 @@
 module Buildizer
   module Ci
     class Base
-      using Refine
-
       attr_reader :packager
 
       def initialize(packager)

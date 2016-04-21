@@ -1,8 +1,6 @@
 module Buildizer
   module Builder
     class Base
-      using Refine
-
       attr_reader :packager
       attr_reader :work_path
       attr_reader :docker

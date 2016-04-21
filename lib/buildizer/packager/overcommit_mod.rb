@@ -1,8 +1,6 @@
 module Buildizer
   class Packager
     module OvercommitMod
-      using Refine
-
       def overcommit_conf_path
         package_path.join('.overcommit.yml')
       end

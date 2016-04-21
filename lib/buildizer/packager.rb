@@ -11,8 +11,6 @@ module Buildizer
     autoload :PackageCloudMod, 'buildizer/packager/package_cloud_mod'
     autoload :DockerCacheMod, 'buildizer/packager/docker_cache_mod'
 
-    using Refine
-
     include MiscMod
     include ProjectSettingsMod
     include UserSettingsMod

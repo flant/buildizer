@@ -1,8 +1,6 @@
 module Buildizer
   class Packager
     module UserSettingsMod
-      using Refine
-
       def user_settings_path
         work_path.join('settings.yml')
       end

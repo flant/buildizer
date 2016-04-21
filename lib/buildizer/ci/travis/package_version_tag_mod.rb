@@ -2,8 +2,6 @@ module Buildizer
   module Ci
     class Travis
       module PackageVersionTagMod
-        using Refine
-
         def require_tag_var_name
           'BUILDIZER_REQUIRE_TAG'
         end

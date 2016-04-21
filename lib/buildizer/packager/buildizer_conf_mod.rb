@@ -1,8 +1,6 @@
 module Buildizer
   class Packager
     module BuildizerConfMod
-      using Refine
-
       def buildizer_conf_path
         package_path.join('Buildizer')
       end

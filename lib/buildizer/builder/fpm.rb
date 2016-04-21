@@ -1,8 +1,6 @@
 module Buildizer
   module Builder
     class Fpm < Base
-      using Refine
-
       FPM_SCRIPT_EVENTS = [:before, :after].map {|at|
                             [:install, :upgrade, :remove].map {|event|
                               "#{at}_#{event}"}}.flatten

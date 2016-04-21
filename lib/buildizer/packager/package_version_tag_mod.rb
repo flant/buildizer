@@ -1,8 +1,6 @@
 module Buildizer
   class Packager
     module PackageVersionTagMod
-      using Refine
-
       def package_version_tag_required_for_deploy?
         ENV['BUILDIZER_REQUIRE_TAG'].to_s.on?
       end
