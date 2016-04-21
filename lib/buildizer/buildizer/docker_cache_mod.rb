@@ -11,7 +11,7 @@ module Buildizer
       end
 
       def setup_docker_cache_repo
-        cli.options['docker_cache']
+        options[:docker_cache]
       end
 
       def setup_docker_cache_org
@@ -19,14 +19,17 @@ module Buildizer
       end
 
       def setup_docker_cache_user
-        cli.options['docker_cache_user'] || user_settings_docker_cache_user_list(setup_docker_cache_org).first
+        options[:docker_cache_user] || user_settings_docker_cache_user_list(setup_docker_cache_org).first
       end
 
       def setup_docker_cache_password
         @setup_docker_cache_password ||= begin
           settings_password = user_settings_docker_cache_user(setup_docker_cache_user)['password']
-          if cli.options['reset_docker_cache_password'] or settings_password.nil?
-            cli.ask("Docker cache user '#{setup_docker_cache_user}' password:", echo: false).tap{puts}
+          if options[:reset_docker_cache_password] or settings_password.nil?
+            secure_option(
+              :docker_cache_password,
+              ask: "Docker cache user '#{setup_docker_cache_user}' password:"
+            )
           else
             settings_password
           end
@@ -34,11 +37,11 @@ module Buildizer
       end
 
       def setup_docker_cache_email
-        cli.options['docker_cache_email'] || user_settings_docker_cache_user(setup_docker_cache_user)['email']
+        options[:docker_cache_email] || user_settings_docker_cache_user(setup_docker_cache_user)['email']
       end
 
       def setup_docker_cache_server
-        cli.options['docker_cache_server'] || user_settings_docker_cache_user(setup_docker_cache_user)['server']
+        options[:docker_cache_server] || user_settings_docker_cache_user(setup_docker_cache_user)['server']
       end
 
       def user_settings_docker_cache
@@ -68,7 +71,7 @@ module Buildizer
       end
 
       def docker_cache_clear_settings?
-        cli.options['clear_docker_cache']
+        options[:clear_docker_cache]
       end
 
       def docker_cache_setup!

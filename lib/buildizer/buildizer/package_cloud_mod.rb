@@ -30,7 +30,7 @@ module Buildizer
       end
 
       def setup_package_cloud_repo_list
-        Array(cli.options['package_cloud']).uniq
+        Array(options[:package_cloud]).uniq
       end
 
       def setup_package_cloud_repo_desc_list
@@ -49,21 +49,23 @@ module Buildizer
       end
 
       def package_cloud_update_settings?
-        cli.options['package_cloud']
+        options[:package_cloud]
       end
 
       def package_cloud_clear_settings?
-        cli.options['clear_package_cloud']
+        options[:clear_package_cloud]
       end
 
       def package_cloud_setup!
         if package_cloud_update_settings?
           update_user_settings = false
           setup_package_cloud_org_list.each do |org|
-            if user_settings_package_cloud_token[org].nil? or
-               cli.options['reset_package_cloud_token']
-              token = cli.ask("Enter token for package_cloud org '#{org}':",
-                               echo: false, default: 'none').tap{puts}
+            if user_settings_package_cloud_token[org].nil? or options[:reset_package_cloud_token]
+              token = secure_option(
+                "package_cloud_token_#{org}",
+                ask: "Enter token for package_cloud org '#{org}':",
+                default: "none",
+              )
               token = (token == 'none' ? nil : token)
               if user_settings_package_cloud_token[org] != token
                 user_settings_package_cloud_token[org] = token

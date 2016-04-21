@@ -8,7 +8,7 @@ module Buildizer
       def project_settings
         @project_settings ||= begin
           (project_settings_path.load_yaml || {}).tap do |settings|
-            settings['master'] = cli.options['master'] if cli.options.key? 'master'
+            settings['master'] = options[:master] if options.key? :master
           end
         end
       end

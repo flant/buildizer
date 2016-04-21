@@ -17,14 +17,14 @@ module Buildizer
         def require_tag_setup!
           with_travis do
             buildizer.with_log(desc: "Travis require tag for deploy") do |&fin|
-              if buildizer.cli.options['require_tag'].nil?
+              if buildizer.options[:require_tag].nil?
                 unless require_tag_var
                   require_tag_var_upsert(value: true.to_env)
                   fin.call 'ENABLED'
                 else
                   fin.call
                 end
-              elsif buildizer.cli.options['require_tag']
+              elsif buildizer.options[:require_tag]
                 require_tag_var_upsert(value: true.to_env)
                 fin.call 'ENABLED'
               else

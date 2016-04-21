@@ -22,17 +22,30 @@ module Buildizer
     include PackageCloudMod
     include DockerCacheMod
 
-    attr_reader :cli
+    attr_reader :options
     attr_reader :package_path
     attr_reader :work_path
     attr_reader :debug
 
-    def initialize(cli)
+    def initialize(cli: nil, **kwargs)
       @cli = cli
+      @options = kwargs
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
-      @debug = ENV['BUILDIZER_DEBUG'].nil? ? cli.options['debug'] : ENV['BUILDIZER_DEBUG'].to_s.on?
-      @color = $stdout.isatty ? cli.options['color'] : false
+      @debug = ENV['BUILDIZER_DEBUG'].nil? ? options[:debug] : ENV['BUILDIZER_DEBUG'].to_s.on?
+      @color = interactive? ? options[:color] : false
+    end
+
+    def interactive?
+      @cli and $stdout.isatty
+    end
+
+    def secure_option(name, ask: nil, default: nil)
+      if interactive? and ask
+        @cli.ask(ask, echo: false, default: default).tap{puts}
+      else
+        options.fetch(name.to_sym, default)
+      end
     end
 
     def prepare!

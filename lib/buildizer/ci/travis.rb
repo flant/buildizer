@@ -97,14 +97,14 @@ module Buildizer
           buildizer.with_log(desc: "Login into travis") do |&fin|
             buildizer.user_settings['travis'] ||= {}
 
-            if buildizer.cli.options['reset_github_token']
+            if buildizer.options[:reset_github_token]
               buildizer.user_settings['travis'].delete('github_token')
               buildizer.user_settings_save!
             end
 
             buildizer.user_settings['travis']['github_token'] ||= begin
               reset_github_token = true
-              buildizer.cli.ask("GitHub access token:", echo: false).tap{puts}
+              buildizer.secure_option(:github_token, ask: "GitHub travis access token:")
             end
 
             ::Travis.github_auth(buildizer.user_settings['travis']['github_token'])
