@@ -38,7 +38,7 @@ module Buildizer
                                          desc: "clear all docker cache settings"
       def setup
         if options['verify_ci']
-          raise(Error, message: "#{buildizer.ci.ci_name} confugration update needed") unless buildizer.ci.configuration_actual?
+          buildizer.ci.configuration_actual!
         else
           buildizer.project_settings_setup!
           buildizer.user_settings_setup!

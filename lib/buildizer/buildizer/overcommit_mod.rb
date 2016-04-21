@@ -27,13 +27,29 @@ module Buildizer
         command! 'overcommit --install'
       end
 
+      def overcommit_buildizer_require_list
+        [].tap do |res|
+          res << 'bundler/setup' if ENV.key? 'BUNDLE_BIN_PATH'
+          res << 'buildizer'
+        end
+      end
+
+      def overcommit_buildizer_require
+        overcommit_buildizer_require_list.map {|req| "      require '#{req}'"}.join("\n")
+      end
+
       def overcommit_verify_setup!
         hookcode = <<-HOOKCODE
 module Overcommit::Hook::PreCommit
   class BuildizerVerify < Base
     def run
-      return :fail unless system("buildizer verify")
+#{overcommit_buildizer_require}
+
+      ::Buildizer::Buildizer.new.verify!
       :pass
+    rescue ::Buildizer::Error => e
+      $stderr.puts e.net_status.net_status_message
+      :fail
     end
   end
 end
@@ -47,8 +63,13 @@ end
 module Overcommit::Hook::PreCommit
   class BuildizerCiVerify < Base
     def run
-      return :fail unless system("buildizer setup --verify-ci")
+#{overcommit_buildizer_require}
+
+      Buildizer::Buildizer.new.ci.configuration_actual!
       :pass
+    rescue ::Buildizer::Error => e
+      $stderr.puts e.net_status.net_status_message
+      :fail
     end
   end
 end

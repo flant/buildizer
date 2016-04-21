@@ -36,6 +36,10 @@ class Hash
     self
   end
 
+  def net_status_message
+    [self[:error], self[:message]].compact.join(': ')
+  end
+
   private
 
   def _symbolize(value)

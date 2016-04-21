@@ -33,6 +33,10 @@ module Buildizer
         raise
       end
 
+      def configuration_actual!
+        raise Error, message: "#{ci_name} confugration update needed" unless configuration_actual?
+      end
+
       def git_tag
         res = _git_tag.to_s
         if res.empty? then nil else res end
