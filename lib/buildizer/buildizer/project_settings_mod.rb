@@ -7,14 +7,14 @@ module Buildizer
 
       def project_settings
         @project_settings ||= begin
-          (project_settings_path.load_yaml || {}).tap do |settings|
+          project_settings_path.load_yaml.tap do |settings|
             settings['master'] = options[:master] if options.key? :master
           end
         end
       end
 
       def project_settings_save!
-        write_path(project_settings_path, YAML.dump(project_settings))
+        write_yaml project_settings_path, project_settings
       end
 
       def project_settings_setup!

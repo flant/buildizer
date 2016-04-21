@@ -6,6 +6,10 @@ class Pathname
                  message: "bad yaml config file #{self}: #{err.message}"
   end
 
+  def dump_yaml(cfg)
+    write! YAML.dump(cfg)
+  end
+
   def write!(*args, &blk)
     dirname.mkpath
     write(*args, &blk)

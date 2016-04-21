@@ -46,6 +46,30 @@ module Buildizer
         end
       end
 
+      def write_yaml(path, cfg)
+        with_log(desc: "Update config #{path}") do |&fin|
+          old_cfg = path.load_yaml
+          if old_cfg == cfg
+            fin.call 'OK'
+          elsif cfg.empty?
+            if path.exist?
+              path.delete
+              fin.call 'DELETED'
+            else
+              fin.call 'OK'
+            end
+          else
+            if path.exist?
+              path.dump_yaml(cfg)
+              fin.call 'UPDATED'
+            else
+              path.dump_yaml(cfg)
+              fin.call 'CREATED'
+            end
+          end
+        end
+      end
+
       def with_log(desc: nil, &blk) # TODO: rename to verbose
         puts("   #{desc}") if desc
         blk.call do |status|

@@ -17,12 +17,8 @@ module Buildizer
         @overcommit_conf ||= overcommit_conf_path.load_yaml
       end
 
-      def overcommit_conf_raw
-        YAML.dump(overcommit_conf)
-      end
-
       def overcommit_conf_dump!
-        write_path overcommit_conf_path, overcommit_conf_raw
+        write_yaml overcommit_conf_path, overcommit_conf
         command! 'overcommit --sign'
       end
 

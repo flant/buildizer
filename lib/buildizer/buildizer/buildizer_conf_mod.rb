@@ -14,7 +14,7 @@ module Buildizer
       end
 
       def buildizer_conf_setup!
-        write_path(buildizer_conf_path, YAML.dump(buildizer_conf))
+        write_yaml(buildizer_conf_path, buildizer_conf)
       end
 
       def package_name

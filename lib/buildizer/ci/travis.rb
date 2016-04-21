@@ -34,7 +34,7 @@ module Buildizer
       include PackageVersionTagMod
 
       def setup!
-        buildizer.write_path(conf_path, YAML.dump(actual_conf))
+        buildizer.write_yaml conf_path, actual_conf
         require_tag_setup!
       end
 
