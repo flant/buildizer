@@ -34,6 +34,7 @@ module Buildizer
       @package_path = Pathname.new(ENV['BUILDIZER_PATH'] || '.').expand_path
       @work_path = Pathname.new(ENV['BUILDIZER_WORK_PATH'] || '~/.buildizer').expand_path
       @debug = ENV['BUILDIZER_DEBUG'].nil? ? cli.options['debug'] : ENV['BUILDIZER_DEBUG'].to_s.on?
+      @color = $stdout.isatty ? cli.options['color'] : false
     end
 
     def prepare!

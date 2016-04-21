@@ -9,6 +9,7 @@ PATH
   remote: .
   specs:
     buildizer (0.0.9)
+      colorize (>= 0.6.0, < 1.0)
       net_status (>= 0.0.1, < 1.0)
       overcommit (>= 0.33.0, < 1.0)
       package_cloud (>= 0.2, < 1.0)
@@ -118,6 +119,3 @@ DEPENDENCIES
   rspec (~> 3.4, >= 3.4.0)
   shellfold!
   travis (~> 1.8, >= 1.8.2)
-
-BUNDLED WITH
-   1.11.2

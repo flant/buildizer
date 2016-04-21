@@ -48,11 +48,16 @@ module Buildizer
         end
       end
 
-      def with_log(desc: nil, &blk)
+      def with_log(desc: nil, &blk) # TODO: rename to verbose
         puts("   #{desc}") if desc
         blk.call do |status|
           puts("=> #{desc} [#{status || 'OK'}]") if desc
         end
+      end
+
+      using Refine
+      def warn(msg)
+        Kernel::warn msg.to_s.colorize(:yellow)
       end
     end # MiscMod
   end # Packager

@@ -5,6 +5,7 @@ module Buildizer
 
       add_shared_options(
         debug: {type: :boolean, default: false, desc: "turn on live logging for external commands"},
+        color: {type: :boolean, default: true, desc: "colorized output"},
       )
 
       no_commands do

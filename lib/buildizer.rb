@@ -6,6 +6,7 @@ require 'pathname'
 require 'shellfold'
 require 'travis'
 require 'travis/tools/github'
+require 'colorize'
 
 require 'buildizer/version'
 require 'buildizer/refine'

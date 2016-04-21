@@ -160,15 +160,15 @@ module Buildizer
           puts "package_version_tag (env TRAVIS_TAG or CI_BUILD_TAG) required: ignoring deploy"
           return
         elsif packager.package_cloud.empty?
-          warn "No package cloud settings " +
-               "(PACKAGECLOUD, PACKAGECLOUD_TOKEN, PACKAGECLOUD_TOKEN_<ORG>) [WARN]"
+          packager.warn "No package cloud settings " +
+                        "(PACKAGECLOUD, PACKAGECLOUD_TOKEN, PACKAGECLOUD_TOKEN_<ORG>) [WARN]"
           return
         end
 
         packager.package_cloud_org.each do |org, token|
           unless token
-            warn "No package cloud token defined for org '#{org}' " +
-                 "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase}) [WARN]"
+            packager.warn "No package cloud token defined for org '#{org}' " +
+                          "(PACKAGECLOUD_TOKEN or PACKAGECLOUD_TOKEN_#{org.upcase}) [WARN]"
           end
         end
 
