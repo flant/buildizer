@@ -1,28 +1,28 @@
 class Hash
-  def symbolize_keys
+  def zymbolize_keys
     map do |key, value|
       [_symbolize(key), value]
     end.to_h
   end
 
-  def symbolize_keys!
+  def zymbolize_keys!
     keys.each do |key|
       self[_symbolize(key)] = delete(key)
     end
     self
   end
 
-  def symbolize_keys_deep
+  def zymbolize_keys_deep
     map do |key, value|
       [_symbolize(key), if value.is_a? Hash
-        value.symbolize_keys_deep
+        value.zymbolize_keys_deep
       else
         value
       end]
     end.to_h
   end
 
-  def symbolize_keys_deep!
+  def zymbolize_keys_deep!
     queue = [self]
     visited = Set.new
     while hash = queue.shift
