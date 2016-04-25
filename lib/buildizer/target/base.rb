@@ -15,12 +15,13 @@ module Buildizer
 
       attr_reader :test_options
       attr_reader :test_env
+      attr_reader :test_image
       attr_reader :before_test
 
       def initialize(builder, image,
                      name:, package_name:, package_version:, package_cloud: [],
                      prepare: [], build_dep: [], before_build: [], maintainer: nil,
-                     test_options: {}, test_env: {}, before_test: [],
+                     test_options: {}, test_env: {}, test_image: nil, before_test: [],
                      &blk)
         @builder = builder
         @image = image
@@ -36,6 +37,7 @@ module Buildizer
 
         @test_options = test_options
         @test_env = test_env
+        @test_image = test_image
         @before_test = before_test
 
         yield if block_given?
@@ -114,6 +116,11 @@ module Buildizer
 
       def container_package_archive_path
         Pathname.new('/').join(container_package_archive_name)
+      end
+
+      def test_envs
+        test_env.map {|var, values| values.map {|value| {var => value}}}
+                .reduce {|res, vars| res.product vars}
       end
     end # Base
   end # Target
