@@ -117,28 +117,6 @@ module Buildizer
       Pathname.new('/extra')
     end
 
-    def run_target_container!(target:, env: {})
-      container = SecureRandom.uuid
-      builder.buildizer.command! [
-        "docker run --detach --name #{container}",
-        *Array(_prepare_docker_params(target, env)),
-        _wrap_docker_run("while true ; do sleep 1 ; done"),
-      ].join(' '), desc: "Run container '#{container}' from docker image '#{target.image.name}'"
-      container
-    end
-
-    def shutdown_container!(container:)
-      builder.buildizer.command! "docker kill #{container}", desc: "Kill container '#{container}'"
-      builder.buildizer.command! "docker rm #{container}", desc: "Remove container '#{container}'"
-    end
-
-    def run_in_container!(container:, cmd:, desc: nil)
-      builder.buildizer.command! [
-        "docker exec #{container}",
-        _wrap_docker_exec(cmd),
-      ].join(' '), timeout: 24*60*60, desc: desc
-    end
-
     def run_in_image!(target:, cmd:, env: {}, desc: nil)
       builder.buildizer.command! [
         "docker run --rm",
