@@ -119,7 +119,7 @@ module Buildizer
       end
 
       def test_envs
-        test_env.map {|var, values| values.map {|value| {var => value}}}
+        test_env.map {|var, values| Array(values).map {|value| {var => value}}}
                 .reduce {|res, vars| res.product vars}
       end
     end # Base

@@ -48,19 +48,29 @@ module Buildizer
         end
       end
 
+      def target_names
+        @target_names ||= begin
+          targets = Array(buildizer.buildizer_conf['target'])
+          restrict_targets = ENV['BUILDIZER_TARGET']
+          restrict_targets = restrict_targets.split(',').map(&:strip) if restrict_targets
+          targets = targets & restrict_targets if restrict_targets
+          targets
+        end
+      end
+
       def targets
-        @targets ||= buildizer.targets.map {|target_name| new_target(target_name)}
+        @targets ||= target_names.map {|name| new_target(name)}
       end
 
       def initial_target_params
         {}.tap do |params|
-          params[:package_name] = buildizer.package_name
-          params[:package_version] = buildizer.package_version
+          params[:package_name] = buildizer.buildizer_conf['package_name']
+          params[:package_version] = buildizer.buildizer_conf['package_version']
           params[:package_cloud] = buildizer.package_cloud
-          params[:prepare] = buildizer.prepare
-          params[:build_dep] = buildizer.build_dep
-          params[:before_build] = buildizer.before_build
-          params[:maintainer] = buildizer.maintainer
+          params[:prepare] = Array(buildizer.buildizer_conf['prepare'])
+          params[:build_dep] = Array(buildizer.buildizer_conf['build_dep']).to_set
+          params[:before_build] = Array(buildizer.buildizer_conf['before_build'])
+          params[:maintainer] = buildizer.buildizer_conf['maintainer']
 
           params[:test_options] = Hash(buildizer.buildizer_conf['test_options'])
           params[:test_env] = buildizer.buildizer_conf['test_env'].to_h
@@ -86,7 +96,7 @@ module Buildizer
           res[:maintainer] = params['maintainer'] || into[:maintainer]
 
           res[:test_options] = into[:test_options].merge params['test_options'].to_h
-          res[:test_env] = into[:test_env].merge params['test_env'].to_h
+          res[:test_env] = into[:test_env].merge(params['test_env'].to_h)
           res[:before_test] = into[:before_test] + Array(params['before_test'])
         end
       end
@@ -117,13 +127,13 @@ module Buildizer
 
       def prepare
         docker.with_cache do
-          buildizer.before_prepare
-                   .each {|cmd| buildizer.command! cmd, desc: "Before prepare command: #{cmd}"}
+          Array(buildizer.buildizer_conf['before_prepare'])
+            .each {|cmd| buildizer.command! cmd, desc: "Before prepare command: #{cmd}"}
 
           targets.each {|target| prepare_target_image(target)}
 
-          buildizer.after_prepare
-                   .each {|cmd| buildizer.command! cmd, desc: "After prepare command: #{cmd}"}
+          Array(buildizer.buildizer_conf['after_prepare'])
+            .each {|cmd| buildizer.command! cmd, desc: "After prepare command: #{cmd}"}
         end # with_cache
       end
 
@@ -158,6 +168,21 @@ module Buildizer
 
         docker.run_in_image!(target: target, cmd: cmd,
                              desc: "Run build in docker image '#{target.image.name}'")
+      end
+
+      def test
+        targets.each {|target| test_target(target)}
+      end
+
+      def test_target(target)
+        target.test_envs.each {|env| test_target_env(target, env)}
+      end
+
+      def test_target_env(target, env)
+        cmd = [
+          *target.before_test,
+        ]
+        puts "#{target.name} #{env}"
       end
 
       def deploy
