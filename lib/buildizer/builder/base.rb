@@ -61,6 +61,10 @@ module Buildizer
           params[:build_dep] = buildizer.build_dep
           params[:before_build] = buildizer.before_build
           params[:maintainer] = buildizer.maintainer
+
+          params[:test_options] = Hash(buildizer.buildizer_conf['test_options'])
+          params[:test_env] = buildizer.buildizer_conf['test_env'].to_h
+          params[:before_test] = Array(buildizer.buildizer_conf['before_test'])
         end
       end
 
@@ -80,6 +84,10 @@ module Buildizer
           res[:build_dep] = into[:build_dep] | Array(params['build_dep']).to_set
           res[:before_build] = into[:before_build] + Array(params['before_build'])
           res[:maintainer] = params['maintainer'] || into[:maintainer]
+
+          res[:test_options] = into[:test_options].merge params['test_options'].to_h
+          res[:test_env] = into[:test_env].merge params['test_env'].to_h
+          res[:before_test] = into[:before_test] + Array(params['before_test'])
         end
       end
 

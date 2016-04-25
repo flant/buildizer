@@ -13,10 +13,15 @@ module Buildizer
       attr_reader :before_build
       attr_reader :maintainer
 
+      attr_reader :test_options
+      attr_reader :test_env
+      attr_reader :before_test
+
       def initialize(builder, image,
                      name:, package_name:, package_version:, package_cloud: [],
-                     prepare: [], build_dep: [], before_build: [],
-                     maintainer: nil, &blk)
+                     prepare: [], build_dep: [], before_build: [], maintainer: nil,
+                     test_options: {}, test_env: {}, before_test: [],
+                     &blk)
         @builder = builder
         @image = image
 
@@ -28,6 +33,10 @@ module Buildizer
         @build_dep = build_dep
         @before_build = before_build
         @maintainer = maintainer
+
+        @test_options = test_options
+        @test_env = test_env
+        @before_test = before_test
 
         yield if block_given?
       end
