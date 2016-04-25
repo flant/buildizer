@@ -48,19 +48,23 @@ module Buildizer
       end
     end
 
-    def prepare!
+    def prepare
       builder.prepare
     end
 
-    def build!
+    def build
       builder.build
     end
 
-    def deploy!
+    def test
+      builder.test
+    end
+
+    def deploy
       builder.deploy
     end
 
-    def verify!
+    def verify
       builder.verify
     end
 

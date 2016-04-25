@@ -51,34 +51,34 @@ module Buildizer
         end
       end
 
-      desc "deinit", "Deinitialize settings (.buildizer.yml, git pre-commit hook)"
-      shared_options
-      def deinit
-        buildizer.deinit!
-      end
-
       desc "prepare", "Prepare images for building packages"
       shared_options
       def prepare
-        buildizer.prepare!
+        buildizer.prepare
       end
 
       desc "build", "Build packages"
       shared_options
       def build
-        buildizer.build!
+        buildizer.build
+      end
+
+      desc "test", "Run integration tests for packages"
+      shared_options
+      def test
+        buildizer.test
       end
 
       desc "deploy", "Deploy packages"
       shared_options
       def deploy
-        buildizer.deploy!
+        buildizer.deploy
       end
 
       desc "verify", "Verify targets params"
       shared_options
       def verify
-        buildizer.verify!
+        buildizer.verify
       end
     end # Main
   end # Cli
