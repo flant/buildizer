@@ -5,7 +5,7 @@ module Buildizer
         super(docker, '14.04', **kwargs)
       end
 
-      def os_codename
+      def codename
         'trusty'
       end
     end # Ubuntu1404

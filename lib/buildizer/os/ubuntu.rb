@@ -12,12 +12,12 @@ module Buildizer
         'ubuntu'
       end
 
-      def os_codename
+      def codename
         raise
       end
 
       def package_cloud_os_version
-        os_codename
+        codename
       end
 
       def build_dep(image, build_dep)
@@ -55,7 +55,7 @@ module Buildizer
          ["DEBFULLNAME=\"#{target.maintainer}\" DEBEMAIL=\"#{target.maintainer_email}\" ",
           "debchange --newversion ",
           "$(dpkg-parsechangelog | grep \"Version:\" | cut -d\" \" -f2-)buildizer#{target.patch_version} ",
-          "--distribution #{os_codename} \"Patch by buildizer\""].join,
+          "--distribution #{codename} \"Patch by buildizer\""].join,
          *target.patch.map {|patch| "cp ../#{patch} debian/patches/"},
          *target.patch.map {|patch| "sed -i \"/#{Regexp.escape(patch)}/d\" debian/patches/series"},
          *target.patch.map {|patch| "echo #{patch} >> debian/patches/series"},

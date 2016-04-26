@@ -5,7 +5,7 @@ module Buildizer
         super(docker, '16.04', **kwargs)
       end
 
-      def os_codename
+      def codename
         'xenial'
       end
     end # Ubuntu1604

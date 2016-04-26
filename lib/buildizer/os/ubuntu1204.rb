@@ -5,7 +5,7 @@ module Buildizer
         super(docker, '12.04', **kwargs)
       end
 
-      def os_codename
+      def codename
         'precise'
       end
     end # Ubuntu1204
