@@ -44,7 +44,7 @@ module Buildizer
         "buildizer/#{os_name}:#{os_version}"
       end
 
-      def name
+      def build_image_name
         target.docker_image
       end
 

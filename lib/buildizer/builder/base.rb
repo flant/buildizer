@@ -167,7 +167,7 @@ module Buildizer
         ]
 
         docker.run_in_image!(target: target, cmd: cmd,
-                             desc: "Run build in docker image '#{target.os.name}'")
+                             desc: "Run build in docker image '#{target.os.build_image_name}'")
       end
 
       def test
