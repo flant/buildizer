@@ -1,10 +1,10 @@
 module Buildizer
   module Os
     class Ubuntu < Base
-      attr_reader :os_version
+      attr_reader :version
 
-      def initialize(docker, os_version, **kwargs)
-        @os_version = os_version
+      def initialize(docker, version, **kwargs)
+        @version = version
         super(docker, **kwargs)
       end
 

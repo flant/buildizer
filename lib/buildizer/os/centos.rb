@@ -1,10 +1,10 @@
 module Buildizer
   module Os
     class Centos < Base
-      attr_reader :os_version
+      attr_reader :version
 
-      def initialize(docker, os_version, **kwargs)
-        @os_version = os_version
+      def initialize(docker, version, **kwargs)
+        @version = version
         super(docker, **kwargs)
       end
 
@@ -17,7 +17,7 @@ module Buildizer
       end
 
       def package_cloud_os_version
-        os_version.match(/\d+$/).to_s.to_i
+        version.match(/\d+$/).to_s.to_i
       end
 
       def fpm_output_type

@@ -11,7 +11,7 @@ module Buildizer
       end
 
       def patch_version
-        @patch_version.nil? ? nil : @patch_version.to_s
+        params[:patch_version].nil? ? nil : params[:patch_version].to_s
       end
 
       def build_image_work_path

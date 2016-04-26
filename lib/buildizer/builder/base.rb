@@ -34,7 +34,7 @@ module Buildizer
         buildizer.buildizer_conf.each do |match_key, match_params|
           match_os_name, match_os_version, match_target_tag = match_key.to_s.split('/', 3)
           if os.name.match_glob?(match_os_name) and
-            ( match_os_version.nil? or os.os_version.match_glob?(match_os_version) ) and
+            ( match_os_version.nil? or os.version.match_glob?(match_os_version) ) and
               ( match_target_tag.nil? or (not target_tag.nil? and
                                           target_tag.match_glob?(match_target_tag)) )
             params = merge_params(into: params, params: match_params)
