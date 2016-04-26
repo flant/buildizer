@@ -1,19 +1,21 @@
 module Buildizer
   module Os
     class Base
-      attr_reader :instructions
       attr_reader :docker
 
-      attr_accessor :target
-
       def initialize(docker, **kwargs)
-        @instructions = []
         @docker = docker
-
-        instruction :FROM, base_image
       end
 
-      def os_name
+      def base_image_name
+        "buildizer/#{base_vendor_image_name}"
+      end
+
+      def base_vendor_image_name
+        "#{os_name}:#{os_version}"
+      end
+
+      def os_name # FIXME: name, version, codename
         raise
       end
 
@@ -36,35 +38,19 @@ module Buildizer
       def fpm_extra_params
       end
 
-      def build_dep(build_dep)
+      def build_dep(image, build_dep)
         raise
       end
 
-      def base_image
-        "buildizer/#{os_name}:#{os_version}"
-      end
-
-      def build_image_name
-        target.docker_image
-      end
-
-      def cache_name
-        target.docker_cache_image
-      end
-
-      def instruction(instruction, cmd)
-        instructions << [instruction.to_s.upcase, cmd].join(' ')
-      end
-
-      def patch_build_dep(builder, target)
+      def patch_build_dep(target)
         target_package_spec(target)
       end
 
-      def native_build_instructions(builder, target)
+      def native_build_instructions(target)
         raise
       end
 
-      def patch_build_instructions(builder, target)
+      def patch_build_instructions(target)
         raise
       end
 

@@ -3,36 +3,26 @@ module Buildizer
     class Fpm < Base
       include PackageNameMod
 
-      attr_reader :fpm_script
-      attr_reader :fpm_config_files
-      attr_reader :fpm_files
-      attr_reader :fpm_conflicts
-      attr_reader :fpm_replaces
-      attr_reader :fpm_provides
-      attr_reader :fpm_depends
-      attr_reader :fpm_description
-      attr_reader :fpm_url
-
       def initialize(builder, os,
                      fpm_script: [], fpm_config_files: {}, fpm_files: {},
                      fpm_conflicts: [], fpm_replaces: {}, fpm_provides: [],
                      fpm_depends: [], fpm_description: nil, fpm_url: nil, **kwargs, &blk)
         super(builder, os, **kwargs) do
-          @fpm_script = fpm_script
-          @fpm_config_files = fpm_config_files
-          @fpm_files = fpm_files
-          @fpm_conflicts = fpm_conflicts
-          @fpm_replaces = fpm_replaces
-          @fpm_provides = fpm_provides
-          @fpm_depends = fpm_depends
-          @fpm_description = fpm_description
-          @fpm_url = fpm_url
+          params[:fpm_script] = fpm_script
+          params[:fpm_config_files] = fpm_config_files
+          params[:fpm_files] = fpm_files
+          params[:fpm_conflicts] = fpm_conflicts
+          params[:fpm_replaces] = fpm_replaces
+          params[:fpm_provides] = fpm_provides
+          params[:fpm_depends] = fpm_depends
+          params[:fpm_description] = fpm_description
+          params[:fpm_url] = fpm_url
 
           yield if block_given?
         end
       end
 
-      def image_work_path
+      def build_image_work_path
         builder.work_path.join('fpm').join(package_name).join(package_version).join(name)
       end
 

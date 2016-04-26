@@ -15,7 +15,7 @@ module Buildizer
       end
 
       def build_instructions(target)
-        target.os.native_build_instructions(self, target)
+        target.os.native_build_instructions(target)
       end
     end # Native
   end # Builder

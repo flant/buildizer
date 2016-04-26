@@ -20,8 +20,8 @@ module Buildizer
         os_codename
       end
 
-      def build_dep(build_dep)
-        instruction :RUN, "apt-get build-dep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
+      def build_dep(image, build_dep)
+        image.instruction :RUN, "apt-get build-dep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
       end
 
       def fpm_output_type
@@ -35,21 +35,21 @@ module Buildizer
         end
       end
 
-      def build_deb_instructions(builder, target)
-        ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{builder.build_jobs}",
-         "cp ../*.deb #{builder.docker.container_build_path}"]
+      def build_deb_instructions(target)
+        ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{target.builder.build_jobs}",
+         "cp ../*.deb #{target.builder.docker.container_build_path}"]
       end
 
-      def native_build_instructions(builder, target)
+      def native_build_instructions(target)
         source_archive_name = "#{target.package_name}_#{target.package_upstream_version}.orig.tar.gz"
 
         [["ln -fs #{target.container_package_archive_path} ",
           "#{target.container_package_path.dirname.join(source_archive_name)}"].join,
          "cd #{target.container_package_path}",
-         *Array(build_deb_instructions(builder, target))]
+         *Array(build_deb_instructions(target))]
       end
 
-      def patch_build_instructions(builder, target)
+      def patch_build_instructions(target)
         ["apt-get source #{target_package_spec(target)}",
          'cd $(ls *.orig.tar* | ruby -ne "puts \$_.split(\\".orig.tar\\").first.gsub(\\"_\\", \\"-\\")")',
          ["DEBFULLNAME=\"#{target.maintainer}\" DEBEMAIL=\"#{target.maintainer_email}\" ",
@@ -59,7 +59,7 @@ module Buildizer
          *target.patch.map {|patch| "cp ../#{patch} debian/patches/"},
          *target.patch.map {|patch| "sed -i \"/#{Regexp.escape(patch)}/d\" debian/patches/series"},
          *target.patch.map {|patch| "echo #{patch} >> debian/patches/series"},
-         *Array(build_deb_instructions(builder, target))]
+         *Array(build_deb_instructions(target))]
       end
 
       def target_package_spec(target)

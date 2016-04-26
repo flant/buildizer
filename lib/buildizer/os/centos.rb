@@ -30,11 +30,11 @@ module Buildizer
         end
       end
 
-      def build_dep(build_dep)
-        instruction :RUN, "yum-builddep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
+      def build_dep(image, build_dep)
+        image.instruction :RUN, "yum-builddep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
       end
 
-      def add_repo(id:, name:, baseurl: nil, enabled: 1, gpgcheck: nil, gpgkey: nil, exclude: nil, includepkgs: nil, mirrorlist: nil)
+      def add_repo(image, id:, name:, baseurl: nil, enabled: 1, gpgcheck: nil, gpgkey: nil, exclude: nil, includepkgs: nil, mirrorlist: nil)
         repo = "[#{id}]\
 \\nname=#{name}\
 \\nenabled=#{enabled}\
@@ -45,32 +45,32 @@ module Buildizer
 #{exclude ? "\\nexclude=#{exclude}" : nil}\
 #{includepkgs ? "\\nincludepkgs=#{includepkgs}" : nil}"
 
-        instruction :RUN, "bash -lec \"echo -e '#{repo}' >> /etc/yum.repos.d/CentOS-Extra-Buildizer.repo\""
+        image.instruction :RUN, "bash -lec \"echo -e '#{repo}' >> /etc/yum.repos.d/CentOS-Extra-Buildizer.repo\""
       end
 
       def target_spec_name(target)
         "#{target.base_package_name}.spec"
       end
 
-      def rpmdev_setuptree_instructions(builder, target)
+      def rpmdev_setuptree_instructions(target)
         "rpmdev-setuptree"
       end
 
-      def build_rpm_instructions(builder, target)
+      def build_rpm_instructions(target)
         ["cd ~/rpmbuild/SPECS/",
          "rpmbuild -bb #{target_spec_name(target)}",
          ["find ~/rpmbuild/RPMS -name '*.rpm' ",
-          "-exec mv {} #{builder.docker.container_build_path} \\;"].join]
+          "-exec mv {} #{target.builder.docker.container_build_path} \\;"].join]
       end
 
-      def native_build_instructions(builder, target)
-        [*Array(rpmdev_setuptree_instructions(builder, target)),
-         "cp #{builder.docker.container_package_archive_path} ~/rpmbuild/SOURCES/",
-         "cp #{builder.docker.container_package_path.join(target_spec_name(target))} ~/rpmbuild/SPECS/",
-         *Array(build_rpm_instructions(builder, target))]
+      def native_build_instructions(target)
+        [*Array(rpmdev_setuptree_instructions(target)),
+         "cp #{target.builder.docker.container_package_archive_path} ~/rpmbuild/SOURCES/",
+         "cp #{target.builder.docker.container_package_path.join(target_spec_name(target))} ~/rpmbuild/SPECS/",
+         *Array(build_rpm_instructions(target))]
       end
 
-      def patch_build_instructions(builder, target)
+      def patch_build_instructions(target)
         rpmchange_cmd = "rpmchange %{cmd} --specfile ~/rpmbuild/SPECS/#{target_spec_name(target)} %{args}"
         get_release_cmd = rpmchange_cmd % {cmd: :tag, args: "--name release"}
         set_release_cmd = rpmchange_cmd % {cmd: :tag, args: "--name release --value %{value}"}
@@ -79,7 +79,7 @@ module Buildizer
           args: "--append --name \"%{name}\" --email \"%{email}\" --message \"%{message}\""
         }
 
-        [*Array(rpmdev_setuptree_instructions(builder, target)),
+        [*Array(rpmdev_setuptree_instructions(target)),
          "yumdownloader --source #{target_package_spec(target)}",
          "rpm -i *.rpm",
          "gem install rpmchange",
@@ -92,7 +92,7 @@ module Buildizer
          changelog_cmd % {name: target.maintainer,
                           email: target.maintainer_email,
                           message: 'Patch by buildizer'},
-         *Array(build_rpm_instructions(builder, target))]
+         *Array(build_rpm_instructions(target))]
       end
 
       def target_package_spec(target)

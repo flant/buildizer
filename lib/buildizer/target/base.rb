@@ -4,19 +4,11 @@ module Buildizer
       attr_reader :builder
       attr_reader :os
 
-      attr_reader :name
-      attr_reader :package_name
-      attr_reader :package_version
-      attr_reader :package_cloud
-      attr_reader :prepare
-      attr_reader :build_dep
-      attr_reader :before_build
-      attr_reader :maintainer
+      attr_reader :params
 
-      attr_reader :test_options
-      attr_reader :test_env
+      attr_reader :build_image
+      attr_reader :cache_image
       attr_reader :test_image
-      attr_reader :before_test
 
       def initialize(builder, os,
                      name:, package_name:, package_version:, package_cloud: [],
@@ -25,25 +17,38 @@ module Buildizer
                      &blk)
         @builder = builder
         @os = os
+        @params = {}
 
-        @name = name
-        @package_name = package_name
-        @package_version = package_version
-        @package_cloud = package_cloud
-        @prepare = prepare
-        @build_dep = build_dep
-        @before_build = before_build
-        @maintainer = maintainer
-
-        @test_options = test_options
-        @test_env = test_env
-        @test_image = test_image
-        @before_test = before_test
+        params[:name] = name
+        params[:package_name] = package_name
+        params[:package_version] = package_version
+        params[:package_cloud] = package_cloud
+        params[:prepare] = prepare
+        params[:build_dep] = build_dep
+        params[:before_build] = before_build
+        params[:maintainer] = maintainer
+        params[:test_options] = test_options
+        params[:test_env] = test_env
+        params[:test_image] = test_image
+        params[:before_test] = before_test
 
         yield if block_given?
+
+        @build_image = ::Buildizer::Image.new(build_image_name, from: os.base_image_name)
+        @cache_image = ::Buildizer::Image.new(cache_image_name) if cache_image_name
+        @test_image = ::Buildizer::Image.new(test_image_name)
       end
 
-      def image_work_path
+      def method_missing(name, *args, &blk)
+        param_name = name.to_sym
+        if params.key? param_name
+          params[param_name]
+        else
+          super
+        end
+      end
+
+      def build_image_work_path
         raise
       end
 
@@ -56,36 +61,36 @@ module Buildizer
       end
 
       def maintainer_email
-        match = maintainer.match(/<(.*)>/) if maintainer
+        match = params[:maintainer].match(/<(.*)>/) if params[:maintainer]
         match[1] if match
       end
 
       def package_version
-        @package_version.nil? ? nil : @package_version.to_s
+        params[:package_version].nil? ? nil : params[:package_version].to_s
       end
 
       def base_package_name
-        package_name.split('-').first
+        params[:package_name].split('-').first
       end
 
-      def docker_image_repository
-        package_name
+      def build_image_tag
+        params[:name].gsub('/', '__')
       end
 
-      def docker_image_tag
-        name.gsub('/', '__')
+      def build_image_name
+        "#{params[:package_name]}:#{build_image_tag}"
       end
 
-      def docker_image
-        "#{docker_image_repository}:#{docker_image_tag}"
+      def cache_image_name
+        "#{os.docker.cache[:repo]}:#{build_image_tag}" if os.docker.cache
       end
 
-      def docker_cache_image
-        "#{os.docker.cache[:repo]}:#{docker_image_tag}" if os.docker.cache
+      def test_image_name
+        params[:test_image] || os.base_vendor_image_name
       end
 
       def package_cloud
-        @package_cloud.map do |desc|
+        params[:package_cloud].map do |desc|
           desc.merge(package_path: _package_cloud_path(desc[:repo]))
         end
       end
@@ -95,11 +100,11 @@ module Buildizer
       end
 
       def image_build_path
-        image_work_path.join('build')
+        build_image_work_path.join('build')
       end
 
       def image_extra_path
-        image_work_path.join('extra')
+        build_image_work_path.join('extra')
       end
 
       def package_version_tag
@@ -118,9 +123,10 @@ module Buildizer
         Pathname.new('/').join(container_package_archive_name)
       end
 
-      def test_envs
-        test_env.map {|var, values| Array(values).uniq.map {|value| {var => value}}}
-                .reduce {|res, vars| res.product vars}
+      def test_env
+        params[:test_env]
+          .map {|var, values| Array(values).uniq.map {|value| {var => value}}}
+          .reduce {|res, vars| res.product vars}
       end
     end # Base
   end # Target

@@ -43,9 +43,7 @@ module Buildizer
 
         check_params! params
 
-        target_klass.new(self, os, name: target_name, **params).tap do |target|
-          os.target = target
-        end
+        target_klass.new(self, os, name: target_name, **params)
       end
 
       def target_names
@@ -130,17 +128,17 @@ module Buildizer
           Array(buildizer.buildizer_conf['before_prepare'])
             .each {|cmd| buildizer.command! cmd, desc: "Before prepare command: #{cmd}"}
 
-          targets.each {|target| prepare_target_image(target)}
+          targets.each {|target| prepare_target_build_image(target)}
 
           Array(buildizer.buildizer_conf['after_prepare'])
             .each {|cmd| buildizer.command! cmd, desc: "After prepare command: #{cmd}"}
         end # with_cache
       end
 
-      def prepare_target_image(target)
-        target.prepare.each {|cmd| target.os.instruction(:RUN, "bash -lec \"#{cmd}\"")}
-        target.os.build_dep(Array(build_dep(target)).to_set + target.build_dep)
-        docker.build_image! target
+      def prepare_target_build_image(target)
+        target.prepare.each {|cmd| target.build_image.instruction(:RUN, "bash -lec \"#{cmd}\"")}
+        target.os.build_dep(target.build_image, Array(build_dep(target)).to_set + target.build_dep)
+        docker.make_build_image target
       end
 
       def build
@@ -167,7 +165,7 @@ module Buildizer
         ]
 
         docker.run_in_image!(target: target, cmd: cmd,
-                             desc: "Run build in docker image '#{target.os.build_image_name}'")
+                             desc: "Run build in docker image '#{target.build_image.name}'")
       end
 
       def test
@@ -175,7 +173,7 @@ module Buildizer
       end
 
       def test_target(target)
-        target.test_envs.each {|env| test_target_env(target, env)}
+        target.test_env.each {|env| test_target_env(target, env)}
       end
 
       def test_target_env(target, env)

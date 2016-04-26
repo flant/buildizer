@@ -1,13 +1,10 @@
 module Buildizer
   module Target
     class Patch < Base
-      attr_reader :patch
-      attr_reader :patch_version
-
       def initialize(builder, os, patch: [], patch_version: nil, **kwargs, &blk)
         super(builder, os, **kwargs) do
-          @patch = patch
-          @patch_version = patch_version
+          params[:patch] = patch
+          params[:patch_version] = patch_version
 
           yield if block_given?
         end
@@ -17,7 +14,7 @@ module Buildizer
         @patch_version.nil? ? nil : @patch_version.to_s
       end
 
-      def image_work_path
+      def build_image_work_path
         builder.work_path.join('patch').join(package_name).join(patch_version).join(name)
       end
 
