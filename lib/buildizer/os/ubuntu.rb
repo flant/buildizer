@@ -1,5 +1,5 @@
 module Buildizer
-  module Image
+  module Os
     class Ubuntu < Base
       attr_reader :os_version
 
@@ -66,5 +66,5 @@ module Buildizer
         [target.package_name, target.package_version].compact.join('=')
       end
     end # Ubuntu
-  end # Image
+  end # Os
 end # Buildizer

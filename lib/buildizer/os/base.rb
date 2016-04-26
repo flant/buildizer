@@ -1,5 +1,5 @@
 module Buildizer
-  module Image
+  module Os
     class Base
       attr_reader :instructions
       attr_reader :docker
@@ -72,5 +72,5 @@ module Buildizer
         raise
       end
     end # Base
-  end # Image
+  end # Os
 end # Buildizer

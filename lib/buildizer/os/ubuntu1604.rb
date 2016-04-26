@@ -1,5 +1,5 @@
 module Buildizer
-  module Image
+  module Os
     class Ubuntu1604 < Ubuntu
       def initialize(docker, **kwargs)
         super(docker, '16.04', **kwargs)
@@ -9,5 +9,5 @@ module Buildizer
         'xenial'
       end
     end # Ubuntu1604
-  end # Image
+  end # Os
 end # Buildizer

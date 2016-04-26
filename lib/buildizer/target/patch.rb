@@ -4,8 +4,8 @@ module Buildizer
       attr_reader :patch
       attr_reader :patch_version
 
-      def initialize(builder, image, patch: [], patch_version: nil, **kwargs, &blk)
-        super(builder, image, **kwargs) do
+      def initialize(builder, os, patch: [], patch_version: nil, **kwargs, &blk)
+        super(builder, os, **kwargs) do
           @patch = patch
           @patch_version = patch_version
 

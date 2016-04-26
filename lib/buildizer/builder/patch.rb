@@ -29,11 +29,11 @@ module Buildizer
       end
 
       def build_instructions(target)
-        target.image.patch_build_instructions(self, target)
+        target.os.patch_build_instructions(self, target)
       end
 
       def build_dep(target)
-        target.image.patch_build_dep(self, target)
+        target.os.patch_build_dep(self, target)
       end
     end # Patch
   end # Builder

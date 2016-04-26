@@ -2,7 +2,7 @@ module Buildizer
   module Target
     class Base
       attr_reader :builder
-      attr_reader :image
+      attr_reader :os
 
       attr_reader :name
       attr_reader :package_name
@@ -18,13 +18,13 @@ module Buildizer
       attr_reader :test_image
       attr_reader :before_test
 
-      def initialize(builder, image,
+      def initialize(builder, os,
                      name:, package_name:, package_version:, package_cloud: [],
                      prepare: [], build_dep: [], before_build: [], maintainer: nil,
                      test_options: {}, test_env: {}, test_image: nil, before_test: [],
                      &blk)
         @builder = builder
-        @image = image
+        @os = os
 
         @name = name
         @package_name = package_name
@@ -81,7 +81,7 @@ module Buildizer
       end
 
       def docker_cache_image
-        "#{image.docker.cache[:repo]}:#{docker_image_tag}" if image.docker.cache
+        "#{os.docker.cache[:repo]}:#{docker_image_tag}" if os.docker.cache
       end
 
       def package_cloud
@@ -91,7 +91,7 @@ module Buildizer
       end
 
       def _package_cloud_path(repo)
-        "#{repo}/#{image.os_package_cloud_name}/#{image.os_package_cloud_version}"
+        "#{repo}/#{os.os_package_cloud_name}/#{os.os_package_cloud_version}"
       end
 
       def image_build_path

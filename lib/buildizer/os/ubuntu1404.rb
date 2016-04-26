@@ -1,5 +1,5 @@
 module Buildizer
-  module Image
+  module Os
     class Ubuntu1404 < Ubuntu
       def initialize(docker, **kwargs)
         super(docker, '14.04', **kwargs)
@@ -9,5 +9,5 @@ module Buildizer
         'trusty'
       end
     end # Ubuntu1404
-  end # Image
+  end # Os
 end # Buildizer

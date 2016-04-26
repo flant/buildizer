@@ -28,13 +28,13 @@ module Buildizer
       def new_target(target_name)
         os_name, os_version, target_tag = target_name.split('/', 3)
 
-        image = docker.new_image(os_name, os_version)
+        os = docker.new_os(os_name, os_version)
 
         params = initial_target_params
         buildizer.buildizer_conf.each do |match_key, match_params|
           match_os_name, match_os_version, match_target_tag = match_key.to_s.split('/', 3)
-          if image.os_name.match_glob?(match_os_name) and
-            ( match_os_version.nil? or image.os_version.match_glob?(match_os_version) ) and
+          if os.os_name.match_glob?(match_os_name) and
+            ( match_os_version.nil? or os.os_version.match_glob?(match_os_version) ) and
               ( match_target_tag.nil? or (not target_tag.nil? and
                                           target_tag.match_glob?(match_target_tag)) )
             params = merge_params(into: params, params: match_params)
@@ -43,8 +43,8 @@ module Buildizer
 
         check_params! params
 
-        target_klass.new(self, image, name: target_name, **params).tap do |target|
-          image.target = target
+        target_klass.new(self, os, name: target_name, **params).tap do |target|
+          os.target = target
         end
       end
 
@@ -138,8 +138,8 @@ module Buildizer
       end
 
       def prepare_target_image(target)
-        target.prepare.each {|cmd| target.image.instruction(:RUN, "bash -lec \"#{cmd}\"")}
-        target.image.build_dep(Array(build_dep(target)).to_set + target.build_dep)
+        target.prepare.each {|cmd| target.os.instruction(:RUN, "bash -lec \"#{cmd}\"")}
+        target.os.build_dep(Array(build_dep(target)).to_set + target.build_dep)
         docker.build_image! target
       end
 
@@ -167,7 +167,7 @@ module Buildizer
         ]
 
         docker.run_in_image!(target: target, cmd: cmd,
-                             desc: "Run build in docker image '#{target.image.name}'")
+                             desc: "Run build in docker image '#{target.os.name}'")
       end
 
       def test
@@ -217,7 +217,7 @@ module Buildizer
       end
 
       def deploy_target(target)
-        cmd = Dir[target.image_build_path.join("*.#{target.image.fpm_output_type}")]
+        cmd = Dir[target.image_build_path.join("*.#{target.os.fpm_output_type}")]
                 .map {|p| Pathname.new(p)}.map {|package_path|
                   package = package_path.basename
                   target.package_cloud.map do |desc|

@@ -8,24 +8,24 @@ module Buildizer
       @cache = cache
     end
 
-    def image_klass(os_name, os_version)
+    def os_klass(os_name, os_version)
       ({
         'ubuntu' => {
-          '12.04' => Image::Ubuntu1204,
-          '14.04' => Image::Ubuntu1404,
-          '16.04' => Image::Ubuntu1604,
-          nil => Image::Ubuntu1404,
+          '12.04' => Os::Ubuntu1204,
+          '14.04' => Os::Ubuntu1404,
+          '16.04' => Os::Ubuntu1604,
+          nil => Os::Ubuntu1404,
         },
         'centos' => {
-          'centos6' => Image::Centos6,
-          'centos7' => Image::Centos7,
-          nil => Image::Centos7,
+          'centos6' => Os::Centos6,
+          'centos7' => Os::Centos7,
+          nil => Os::Centos7,
         },
       }[os_name] || {})[os_version]
     end
 
-    def new_image(os_name, os_version, **kwargs)
-      klass = image_klass(os_name, os_version)
+    def new_os(os_name, os_version, **kwargs)
+      klass = os_klass(os_name, os_version)
       raise Error, message: "unknown os '#{[os_name, os_version].compact.join('-')}'" unless klass
       klass.new(self, **kwargs)
     end
@@ -60,41 +60,41 @@ module Buildizer
       builder.buildizer.command! 'docker logout', desc: "Docker cache account logout"
     end
 
-    def pull_image(image)
-      builder.buildizer.command! "docker pull #{image.base_image}", desc: "Pull docker base image #{image.base_image}"
+    def pull_image(os) #FIXME
+      builder.buildizer.command! "docker pull #{os.base_image}", desc: "Pull docker base os #{os.base_image}"
       if cache
         pull_cache_res = builder.buildizer.command(
-          "docker pull #{image.cache_name}",
-           desc: "Try to pull docker cache image #{image.cache_name}"
+          "docker pull #{os.cache_name}",
+           desc: "Try to pull docker cache image #{os.cache_name}"
         )
         if pull_cache_res.status.success?
-          builder.buildizer.command! "docker tag -f #{image.cache_name} #{image.name}",
-                                      desc: "Tag cache image #{image.cache_name}" +
-                                            " as prepared build image #{image.name}"
-          builder.buildizer.command! "docker rmi #{image.cache_name}",
-                                      desc: "Remove cache image #{image.cache_name}"
+          builder.buildizer.command! "docker tag -f #{os.cache_name} #{os.name}",
+                                      desc: "Tag cache image #{os.cache_name}" +
+                                            " as prepared build image #{os.name}"
+          builder.buildizer.command! "docker rmi #{os.cache_name}",
+                                      desc: "Remove cache image #{os.cache_name}"
         end
       end
     end
 
-    def push_image(image)
+    def push_image(os) #FIXME
       if cache
-        builder.buildizer.command! "docker tag -f #{image.name} #{image.cache_name}",
-                                    desc: "Tag prepared build image #{image.name}" +
-                                          " as cache image #{image.cache_name}"
-        builder.buildizer.command! "docker push #{image.cache_name}",
-                                    desc: "Push cache image #{image.cache_name}"
+        builder.buildizer.command! "docker tag -f #{os.name} #{os.cache_name}",
+                                    desc: "Tag prepared build image #{os.name}" +
+                                          " as cache image #{os.cache_name}"
+        builder.buildizer.command! "docker push #{os.cache_name}",
+                                    desc: "Push cache image #{os.cache_name}"
       end
     end
 
-    def build_image!(target)
-      pull_image target.image
+    def build_image!(target) # FIXME
+      pull_image target.os
 
-      target.image_work_path.join('Dockerfile').write! [*target.image.instructions, nil].join("\n")
-      builder.buildizer.command! "docker build -t #{target.image.name} #{target.image_work_path}",
-                                  desc: "Build docker image #{target.image.name}"
+      target.image_work_path.join('Dockerfile').write! [*target.os.instructions, nil].join("\n")
+      builder.buildizer.command! "docker build -t #{target.os.name} #{target.image_work_path}",
+                                  desc: "Build docker image #{target.os.name}"
 
-      push_image target.image
+      push_image target.os
     end
 
     def container_package_path
@@ -117,7 +117,7 @@ module Buildizer
       Pathname.new('/extra')
     end
 
-    def run_in_image!(target:, cmd:, env: {}, desc: nil)
+    def run_in_image!(target:, cmd:, env: {}, desc: nil) # FIXME
       builder.buildizer.command! [
         "docker run --rm",
         *Array(_prepare_docker_params(target, env)),
@@ -133,7 +133,7 @@ module Buildizer
        "-v #{builder.buildizer.package_path}:#{container_package_mount_path}:ro",
        "-v #{target.image_extra_path}:#{container_extra_path}:ro",
        "-v #{target.image_build_path}:#{container_build_path}",
-       target.image.name]
+       target.os.name]
     end
 
     def _wrap_docker_exec(cmd)

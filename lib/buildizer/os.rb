@@ -1,4 +1,4 @@
 module Buildizer
-  module Image
-  end # Image
+  module Os
+  end # Os
 end # Buildizer

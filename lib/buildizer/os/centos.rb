@@ -1,5 +1,5 @@
 module Buildizer
-  module Image
+  module Os
     class Centos < Base
       attr_reader :os_version
 
@@ -99,5 +99,5 @@ module Buildizer
         [target.package_name, target.package_version].compact.join('-')
       end
     end # Centos
-  end # Image
+  end # Os
 end # Buildizer

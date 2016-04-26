@@ -13,11 +13,11 @@ module Buildizer
       attr_reader :fpm_description
       attr_reader :fpm_url
 
-      def initialize(builder, image,
+      def initialize(builder, os,
                      fpm_script: [], fpm_config_files: {}, fpm_files: {},
                      fpm_conflicts: [], fpm_replaces: {}, fpm_provides: [],
                      fpm_depends: [], fpm_description: nil, fpm_url: nil, **kwargs, &blk)
-        super(builder, image, **kwargs) do
+        super(builder, os, **kwargs) do
           @fpm_script = fpm_script
           @fpm_config_files = fpm_config_files
           @fpm_files = fpm_files
