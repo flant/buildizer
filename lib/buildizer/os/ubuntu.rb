@@ -8,7 +8,7 @@ module Buildizer
         super(docker, **kwargs)
       end
 
-      def os_name
+      def name
         'ubuntu'
       end
 
@@ -16,7 +16,7 @@ module Buildizer
         raise
       end
 
-      def os_package_cloud_version
+      def package_cloud_os_version
         os_codename
       end
 

@@ -8,15 +8,15 @@ module Buildizer
         super(docker, **kwargs)
       end
 
-      def os_name
+      def name
         'centos'
       end
 
-      def os_package_cloud_name
+      def package_cloud_os_name
         'el'
       end
 
-      def os_package_cloud_version
+      def package_cloud_os_version
         os_version.match(/\d+$/).to_s.to_i
       end
 

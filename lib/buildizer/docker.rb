@@ -8,7 +8,7 @@ module Buildizer
       @cache = cache
     end
 
-    def os_klass(os_name, os_version)
+    def os_klass(name, version)
       ({
         'ubuntu' => {
           '12.04' => Os::Ubuntu1204,
@@ -21,12 +21,12 @@ module Buildizer
           'centos7' => Os::Centos7,
           nil => Os::Centos7,
         },
-      }[os_name] || {})[os_version]
+      }[name] || {})[version]
     end
 
-    def new_os(os_name, os_version, **kwargs)
-      klass = os_klass(os_name, os_version)
-      raise Error, message: "unknown os '#{[os_name, os_version].compact.join('-')}'" unless klass
+    def new_os(name, version, **kwargs)
+      klass = os_klass(name, version)
+      raise Error, message: "unknown os '#{[name, version].compact.join('-')}'" unless klass
       klass.new(self, **kwargs)
     end
 

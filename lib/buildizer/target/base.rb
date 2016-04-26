@@ -96,7 +96,7 @@ module Buildizer
       end
 
       def _package_cloud_path(repo)
-        "#{repo}/#{os.os_package_cloud_name}/#{os.os_package_cloud_version}"
+        "#{repo}/#{os.package_cloud_os_name}/#{os.package_cloud_os_version}"
       end
 
       def image_build_path

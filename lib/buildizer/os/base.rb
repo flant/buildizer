@@ -12,18 +12,18 @@ module Buildizer
       end
 
       def base_vendor_image_name
-        "#{os_name}:#{os_version}"
+        "#{name}:#{os_version}"
       end
 
-      def os_name # FIXME: name, version, codename
+      def name # FIXME: name, version, codename
         raise
       end
 
-      def os_package_cloud_name
-        os_name
+      def package_cloud_os_name
+        name
       end
 
-      def os_package_cloud_version
+      def package_cloud_os_version
         os_version
       end
 
