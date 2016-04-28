@@ -22,7 +22,7 @@ module Buildizer
         end
       end
 
-      def build_image_work_path
+      def image_work_path
         builder.work_path.join('fpm').join(package_name).join(package_version).join(name)
       end
 

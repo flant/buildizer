@@ -3,7 +3,7 @@ module Buildizer
     class Native < Base
       include PackageNameMod
 
-      def build_image_work_path
+      def image_work_path
         builder.work_path.join('native').join(package_name).join(package_version).join(name)
       end
 

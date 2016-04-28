@@ -35,6 +35,11 @@ module Buildizer
         end
       end
 
+      def install_git_instructions(target)
+        ["apt-get update -q",
+         "apt-get install -y git"]
+      end
+
       def build_deb_instructions(target)
         ["DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc -j#{target.builder.build_jobs}",
          "cp ../*.deb #{target.builder.docker.container_build_path}"]

@@ -34,9 +34,9 @@ module Buildizer
 
         yield if block_given?
 
-        @build_image = ::Buildizer::Image.new(build_image_name, from: os.base_image_name)
-        @cache_image = ::Buildizer::Image.new(cache_image_name) if cache_image_name
-        @test_image = ::Buildizer::Image.new(test_image_name)
+        @build_image = ::Buildizer::Image.new(build_image_name, self, from: os.base_image_name)
+        @cache_image = ::Buildizer::Image.new(cache_image_name, self) if cache_image_name
+        @test_image = ::Buildizer::Image.new(test_image_name, self)
       end
 
       def method_missing(name, *args, &blk)
@@ -48,7 +48,7 @@ module Buildizer
         end
       end
 
-      def build_image_work_path
+      def image_work_path
         raise
       end
 
@@ -100,11 +100,11 @@ module Buildizer
       end
 
       def image_build_path
-        build_image_work_path.join('build')
+        image_work_path.join('build')
       end
 
       def image_extra_path
-        build_image_work_path.join('extra')
+        image_work_path.join('extra')
       end
 
       def package_version_tag
@@ -123,10 +123,27 @@ module Buildizer
         Pathname.new('/').join(container_package_archive_name)
       end
 
+      def test_dir_name
+        'test'
+      end
+
+      def container_test_path
+        container_package_path.join(test_dir_name)
+      end
+
+      def test_path
+        builder.buildizer.package_path.join(test_dir_name)
+      end
+
       def test_env
         params[:test_env]
           .map {|var, values| Array(values).uniq.map {|value| {var => value}}}
           .reduce {|res, vars| res.product vars}
+          .to_a
+          .map {|vars|
+            vars = [vars] unless vars.is_a? Array
+            vars.reduce(&:merge)
+          }
       end
     end # Base
   end # Target

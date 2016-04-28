@@ -30,6 +30,10 @@ module Buildizer
         end
       end
 
+      def install_git_instructions(target)
+        "yum install -y git"
+      end
+
       def build_dep(image, build_dep)
         image.instruction :RUN, "yum-builddep -y #{build_dep.to_a.join(' ')}" if build_dep.any?
       end

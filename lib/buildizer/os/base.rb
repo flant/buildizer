@@ -15,7 +15,7 @@ module Buildizer
         "#{name}:#{version}"
       end
 
-      def name # FIXME: name, version, codename
+      def name
         raise
       end
 
@@ -55,6 +55,10 @@ module Buildizer
       end
 
       def target_package_spec(target)
+        raise
+      end
+
+      def install_git_instructions(target)
         raise
       end
     end # Base

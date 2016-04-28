@@ -85,8 +85,12 @@ module Buildizer
     def make_build_image(target)
       pull_cache_image(target.build_image, target.cache_image) if target.cache_image
 
-      target.build_image_work_path.join('Dockerfile').write! [*target.build_image.instructions, nil].join("\n")
-      builder.buildizer.command! "docker build -t #{target.build_image.name} #{target.build_image_work_path}",
+      target.build_image.dockerfile_write!
+
+      builder.buildizer.command! "docker build " +
+                                 "-t #{target.build_image.name} " +
+                                 "-f #{target.build_image.dockerfile_path} " +
+                                 "#{target.build_image.dockerfile_path.dirname}",
                                   desc: "Build docker image #{target.build_image.name}"
 
       cache_build_image(target.build_image, target.cache_image) if target.cache_image
@@ -112,31 +116,68 @@ module Buildizer
       Pathname.new('/extra')
     end
 
-    def run_in_image!(target:, cmd:, env: {}, desc: nil) # FIXME
-      builder.buildizer.command! [
-        "docker run --rm",
-        *Array(_prepare_docker_params(target, env)),
-        _wrap_docker_run(cmd),
-      ].join(' '), timeout: 24*60*60, desc: desc
+    def run_container!(name: nil, image:, env: {}, desc: nil)
+      (name || SecureRandom.uuid).tap do |name|
+        builder.buildizer.command! [
+          "docker run --detach --name #{name}",
+          *Array(_prepare_docker_params(image, env)),
+          _wrap_docker_command("while true ; do sleep 1 ; done"),
+        ].join(' '), desc: desc
+      end
     end
 
-    def _prepare_docker_params(target, env)
-      target.image_extra_path.mkpath
-      target.image_build_path.mkpath
+    def shutdown_container!(container:)
+      builder.buildizer.command! "docker kill #{container}", desc: "Kill container '#{container}'"
+      builder.buildizer.command! "docker rm #{container}", desc: "Remove container '#{container}'"
+    end
+
+    def with_container(**kwargs, &blk)
+      container = run_container!(**kwargs)
+      begin
+        yield container if block_given?
+      ensure
+        shutdown_container!(container: container)
+      end
+    end
+
+    def run_in_container(container:, cmd:, desc: nil, cmd_opts: {})
+      builder.buildizer.command [
+        "docker exec #{container}",
+        _wrap_docker_command(cmd),
+      ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
+    end
+
+    def run_in_container!(cmd_opts: {}, **kwargs)
+      cmd_opts[:do_raise] = true
+      run_in_container(cmd_opts: cmd_opts, **kwargs)
+    end
+
+    def run_in_image(image:, cmd:, env: {}, desc: nil, cmd_opts: {})
+      builder.buildizer.command [
+        "docker run --rm",
+        *Array(_prepare_docker_params(image, env)),
+        _wrap_docker_command(cmd),
+      ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
+    end
+
+    def run_in_image!(cmd_opts: {}, **kwargs)
+      cmd_opts[:do_raise] = true
+      run_in_image(cmd_opts: cmd_opts, **kwargs)
+    end
+
+    def _prepare_docker_params(image, env)
+      image.extra_path.mkpath
+      image.build_path.mkpath
 
       [*env.map {|k,v| "-e #{k}=#{v}"},
        "-v #{builder.buildizer.package_path}:#{container_package_mount_path}:ro",
-       "-v #{target.image_extra_path}:#{container_extra_path}:ro",
-       "-v #{target.image_build_path}:#{container_build_path}",
-       target.build_image.name]
+       "-v #{image.extra_path}:#{container_extra_path}:ro",
+       "-v #{image.build_path}:#{container_build_path}",
+       image.name]
     end
 
-    def _wrap_docker_exec(cmd)
+    def _wrap_docker_command(cmd)
       "/bin/bash -lec '#{_make_cmd(cmd)}'"
-    end
-
-    def _wrap_docker_run(cmd)
-      "'#{['set -e', _make_cmd(cmd)].join('; ')}'"
     end
 
     def _make_cmd(cmd)

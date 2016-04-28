@@ -164,23 +164,84 @@ module Buildizer
           *Array(build_instructions(target)),
         ]
 
-        docker.run_in_image!(target: target, cmd: cmd,
-                             desc: "Run build in docker image '#{target.build_image.name}'")
+        docker.run_in_image! image: target.build_image,
+                             cmd: cmd,
+                             desc: "Run build in docker image '#{target.build_image.name}'"
       end
 
       def test
-        targets.each {|target| test_target(target)}
+        failures = targets
+          .map {|target| [target, Array(test_target(target))]}
+          .reduce([]) {|res, (target, results)|
+            res.push *results.map {|res|
+              {target: target,
+               result: res}
+            }
+          }
+          .select {|test| test[:result].net_status_error?}
+
+        if failures.any?
+          puts
+          puts "Failures:"
+          failures.each do |failure|
+            puts "* #{failure[:target].name} env=#{failure[:result][:data][:env]}"
+            puts failure[:result][:message]
+            puts
+          end
+
+          raise Error, message: "test failed"
+        end
       end
 
       def test_target(target)
-        target.test_env.each {|env| test_target_env(target, env)}
+        return unless target.test_path.exist?
+
+        target
+          .test_env
+          .map {|env| test_target_env(target, env)}
+      end
+
+      def install_bats_instructions(target)
+        [*Array(target.os.install_git_instructions(target)),
+         "cd /tmp",
+         "git clone https://github.com/sstephenson/bats.git",
+         "cd bats",
+         "./install.sh /usr/local"]
       end
 
       def test_target_env(target, env)
-        cmd = [
-          *target.before_test,
-        ]
-        puts "#{target.name} #{env}"
+        #TODO: privileged
+
+        container_name = SecureRandom.uuid
+        docker.with_container(
+          name: container_name,
+          image: target.test_image,
+          env: env.merge(TERM: ENV['TERM']),
+          desc: "Run test container '#{container_name}' " +
+                "target='#{target.name}' env=#{env}"
+        ) do |container|
+          prepare_cmd = [*Array(prepare_package_source_instructions(target)),
+                         *Array(install_bats_instructions(target)),
+                         "cd #{docker.container_package_path}",
+                         *target.before_test]
+
+          docker.run_in_container! container: container,
+                                   cmd: prepare_cmd,
+                                   desc: "Run before_test stage in test container '#{container}'"
+
+          res = docker.run_in_container container: container,
+                                        cmd: "bats --pretty #{target.container_test_path}",
+                                        desc: "Run test stage in test container '#{container}'",
+                                        cmd_opts: {live_log: false, log_failure: false}
+
+          {}.tap do |ret|
+            ret[:data] = {env: env}
+            unless res.status.success?
+              ret[:error] = :error
+              ret[:message] = res.stdout + res.stderr
+            end
+          end
+        end # with_container
       end
 
       def deploy

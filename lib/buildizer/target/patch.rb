@@ -14,7 +14,7 @@ module Buildizer
         params[:patch_version].nil? ? nil : params[:patch_version].to_s
       end
 
-      def build_image_work_path
+      def image_work_path
         builder.work_path.join('patch').join(package_name).join(patch_version).join(name)
       end
 
