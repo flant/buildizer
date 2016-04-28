@@ -116,11 +116,12 @@ module Buildizer
       Pathname.new('/extra')
     end
 
-    def run_container!(name: nil, image:, env: {}, desc: nil, **kwargs)
+    def run_container!(name: nil, image:, env: {}, desc: nil, privileged: nil)
       (name || SecureRandom.uuid).tap do |name|
         builder.buildizer.command! [
           "docker run --detach --name #{name}",
-          *Array(_prepare_docker_params(image, env: env, **kwargs)),
+          *Array(_prepare_command_params(privileged: privileged)),
+          *Array(_prepare_container_params(image, env: env)),
           _wrap_docker_command("while true ; do sleep 1 ; done"),
         ].join(' '), desc: desc
       end
@@ -140,9 +141,10 @@ module Buildizer
       end
     end
 
-    def run_in_container(container:, cmd:, desc: nil, cmd_opts: {})
+    def run_in_container(container:, cmd:, desc: nil, cmd_opts: {}, privileged: nil)
       builder.buildizer.command [
         "docker exec #{container}",
+        *Array(_prepare_command_params(privileged: privileged)),
         _wrap_docker_command(cmd),
       ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
     end
@@ -153,10 +155,11 @@ module Buildizer
       run_in_container(cmd_opts: cmd_opts, **kwargs)
     end
 
-    def run_in_image(image:, cmd:, env: {}, desc: nil, cmd_opts: {})
+    def run_in_image(image:, cmd:, env: {}, desc: nil, cmd_opts: {}, privileged: nil)
       builder.buildizer.command [
         "docker run --rm",
-        *Array(_prepare_docker_params(image, env: env)),
+        *Array(_prepare_command_params(privileged: privileged)),
+        *Array(_prepare_container_params(image, env: env)),
         _wrap_docker_command(cmd),
       ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
     end
@@ -166,7 +169,7 @@ module Buildizer
       run_in_image(cmd_opts: cmd_opts, **kwargs)
     end
 
-    def _prepare_docker_params(image, env: {}, privileged: nil)
+    def _prepare_container_params(image, env: {})
       image.extra_path.mkpath
       image.build_path.mkpath
 
@@ -174,8 +177,11 @@ module Buildizer
        "-v #{builder.buildizer.package_path}:#{container_package_mount_path}:ro",
        "-v #{image.extra_path}:#{container_extra_path}:ro",
        "-v #{image.build_path}:#{container_build_path}",
-       (privileged == true) ? "--privileged=true" : nil,
        image.name].compact
+    end
+
+    def _prepare_command_params(privileged: nil)
+      (privileged == true) ? "--privileged=true" : nil
     end
 
     def _wrap_docker_command(cmd)
