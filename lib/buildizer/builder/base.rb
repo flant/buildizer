@@ -210,13 +210,12 @@ module Buildizer
       end
 
       def test_target_env(target, env)
-        #TODO: privileged
-
         container_name = SecureRandom.uuid
         docker.with_container(
           name: container_name,
           image: target.test_image,
           env: env.merge(TERM: ENV['TERM']),
+          privileged: target.test_options['privileged'],
           desc: "Run test container '#{container_name}' " +
                 "target='#{target.name}' env=#{env}"
         ) do |container|

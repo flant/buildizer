@@ -116,11 +116,11 @@ module Buildizer
       Pathname.new('/extra')
     end
 
-    def run_container!(name: nil, image:, env: {}, desc: nil)
+    def run_container!(name: nil, image:, env: {}, desc: nil, **kwargs)
       (name || SecureRandom.uuid).tap do |name|
         builder.buildizer.command! [
           "docker run --detach --name #{name}",
-          *Array(_prepare_docker_params(image, env)),
+          *Array(_prepare_docker_params(image, env: env, **kwargs)),
           _wrap_docker_command("while true ; do sleep 1 ; done"),
         ].join(' '), desc: desc
       end
@@ -149,13 +149,14 @@ module Buildizer
 
     def run_in_container!(cmd_opts: {}, **kwargs)
       cmd_opts[:do_raise] = true
+      cmd_opts[:log_failure] = true
       run_in_container(cmd_opts: cmd_opts, **kwargs)
     end
 
     def run_in_image(image:, cmd:, env: {}, desc: nil, cmd_opts: {})
       builder.buildizer.command [
         "docker run --rm",
-        *Array(_prepare_docker_params(image, env)),
+        *Array(_prepare_docker_params(image, env: env)),
         _wrap_docker_command(cmd),
       ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
     end
@@ -165,7 +166,7 @@ module Buildizer
       run_in_image(cmd_opts: cmd_opts, **kwargs)
     end
 
-    def _prepare_docker_params(image, env)
+    def _prepare_docker_params(image, env: {}, privileged: nil)
       image.extra_path.mkpath
       image.build_path.mkpath
 
@@ -173,7 +174,8 @@ module Buildizer
        "-v #{builder.buildizer.package_path}:#{container_package_mount_path}:ro",
        "-v #{image.extra_path}:#{container_extra_path}:ro",
        "-v #{image.build_path}:#{container_build_path}",
-       image.name]
+       (privileged == true) ? "--privileged=true" : nil,
+       image.name].compact
     end
 
     def _wrap_docker_command(cmd)
