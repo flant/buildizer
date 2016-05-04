@@ -45,7 +45,7 @@ module Overcommit::Hook::PreCommit
     def run
 #{overcommit_buildizer_require}
 
-      ::Buildizer::Buildizer.new.verify!
+      ::Buildizer::Buildizer.new.verify
       :pass
     rescue ::Buildizer::Error => e
       $stderr.puts e.net_status.net_status_message
