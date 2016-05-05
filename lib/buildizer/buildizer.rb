@@ -57,6 +57,10 @@ module Buildizer
     end
 
     def test
+      raise(
+        Error, message: "cannot run test shell in non interactive mode"
+      ) if options[:shell] and not interactive?
+
       builder.test
     end
 

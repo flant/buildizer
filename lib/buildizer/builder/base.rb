@@ -228,18 +228,23 @@ module Buildizer
                                    cmd: prepare_cmd,
                                    desc: "Run before_test stage in test container '#{container}'"
 
-          res = docker.run_in_container container: container,
-                                        cmd: "bats --pretty #{target.container_test_path}",
-                                        desc: "Run test stage in test container '#{container}'",
-                                        cmd_opts: {live_log: false, log_failure: false}
+          ret = {env: env}
 
-          {}.tap do |ret|
-            ret[:data] = {env: env}
+          if buildizer.options[:shell]
+            docker.shell_in_container container: container
+          else
+            res = docker.run_in_container container: container,
+                                          cmd: "bats --pretty #{target.container_test_path}",
+                                          desc: "Run test stage in test container '#{container}'",
+                                          cmd_opts: {live_log: true, log_failure: true}
+
             unless res.status.success?
               ret[:error] = :error
               ret[:message] = res.stdout + res.stderr
             end
           end
+
+          ret
         end # with_container
       end
 

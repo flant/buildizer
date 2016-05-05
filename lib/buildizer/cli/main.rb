@@ -65,6 +65,8 @@ module Buildizer
 
       desc "test", "Run integration tests for packages"
       shared_options
+      method_option :shell, type: :boolean, default: false,
+                            desc: "drop into test shell for each target + env"
       def test
         buildizer.test
       end

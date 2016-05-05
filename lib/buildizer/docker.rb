@@ -141,9 +141,15 @@ module Buildizer
       end
     end
 
-    def run_in_container(container:, cmd:, desc: nil, cmd_opts: {}, privileged: nil)
+    def shell_in_container(container:)
+      system "docker exec -ti #{container} bash"
+    end
+
+    def run_in_container(container:, cmd:, desc: nil, cmd_opts: {}, privileged: nil, docker_opts: {})
       builder.buildizer.command [
-        "docker exec #{container}",
+        "docker exec",
+        *docker_opts.map {|k, v| "--#{k}=#{v}"},
+        container,
         *Array(_prepare_command_params(privileged: privileged)),
         _wrap_docker_command(cmd),
       ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
