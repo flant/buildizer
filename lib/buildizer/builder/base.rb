@@ -236,7 +236,7 @@ module Buildizer
             res = docker.run_in_container container: container,
                                           cmd: "bats --pretty #{target.container_test_path}",
                                           desc: "Run test stage in test container '#{container}'",
-                                          cmd_opts: {live_log: true, log_failure: true}
+                                          cmd_opts: {live_log: true, log_failure: false}
 
             unless res.status.success?
               ret[:error] = :error
