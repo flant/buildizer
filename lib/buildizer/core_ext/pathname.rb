@@ -2,8 +2,8 @@ class Pathname
   def load_yaml
     exist? ? YAML.load(read) : {}
   rescue Psych::Exception => err
-    raise Error, error: :input_error,
-                 message: "bad yaml config file #{self}: #{err.message}"
+    raise Buildizer::Error, error: :input_error,
+                            message: "bad yaml config file #{self}: #{err.message}"
   end
 
   def dump_yaml(cfg)
