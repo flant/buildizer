@@ -226,7 +226,8 @@ module Buildizer
 
           docker.run_in_container! container: container,
                                    cmd: prepare_cmd,
-                                   desc: "Run before_test stage in test container '#{container}'"
+                                   desc: "Run before_test stage in test container '#{container}'",
+                                   docker_opts: {tty: true}
 
           ret = {env: env}
 
