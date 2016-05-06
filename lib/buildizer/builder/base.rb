@@ -209,6 +209,10 @@ module Buildizer
          "./install.sh /usr/local"]
       end
 
+      def install_test_package_instructions(target)
+        target.os.install_test_package_instructions(target)
+      end
+
       def test_target_env(target, env)
         container_name = SecureRandom.uuid
         docker.with_container(
@@ -221,6 +225,7 @@ module Buildizer
         ) do |container|
           prepare_cmd = [*Array(prepare_package_source_instructions(target)),
                          *Array(install_bats_instructions(target)),
+                         *Array(install_test_package_instructions(target)),
                          "cd #{docker.container_package_path}",
                          *target.before_test]
 

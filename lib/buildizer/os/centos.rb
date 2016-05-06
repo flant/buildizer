@@ -31,7 +31,11 @@ module Buildizer
       end
 
       def install_git_instructions(target)
-        "yum install -y git"
+        "yum install -qy git"
+      end
+
+      def install_test_package_instructions(target)
+        "yum localinstall -qy #{target.builder.docker.container_build_path.join('*.rpm')}"
       end
 
       def build_dep(image, build_dep)
