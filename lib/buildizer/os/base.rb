@@ -58,10 +58,6 @@ module Buildizer
         raise
       end
 
-      def install_git_instructions(target)
-        raise
-      end
-
       def install_test_package_instructions(target)
         raise
       end

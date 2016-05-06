@@ -35,11 +35,6 @@ module Buildizer
         end
       end
 
-      def install_git_instructions(target)
-        ["apt-get update -qq",
-         "apt-get install -qqy git"]
-      end
-
       def install_test_package_instructions(target)
         "(dpkg -i #{target.builder.docker.container_build_path.join('*.deb')} || true)" +
           " && apt-get install -qqyf"

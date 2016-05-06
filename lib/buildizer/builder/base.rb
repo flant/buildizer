@@ -201,14 +201,6 @@ module Buildizer
           .map {|env| test_target_env(target, env)}
       end
 
-      def install_bats_instructions(target)
-        [*Array(target.os.install_git_instructions(target)),
-         "cd /tmp",
-         "git clone https://github.com/sstephenson/bats.git",
-         "cd bats",
-         "./install.sh /usr/local"]
-      end
-
       def install_test_package_instructions(target)
         target.os.install_test_package_instructions(target)
       end
@@ -224,7 +216,6 @@ module Buildizer
                 "target='#{target.name}' env=#{env}"
         ) do |container|
           prepare_cmd = [*Array(prepare_package_source_instructions(target)),
-                         *Array(install_bats_instructions(target)),
                          *Array(install_test_package_instructions(target)),
                          "cd #{docker.container_package_path}",
                          *target.before_test]
@@ -239,6 +230,7 @@ module Buildizer
           if buildizer.options[:shell]
             docker.shell_in_container container: container
           else
+            #FIXME: test stage
             res = docker.run_in_container container: container,
                                           cmd: "bats --pretty #{target.container_test_path}",
                                           desc: "Run test stage in test container '#{container}'",
