@@ -73,6 +73,7 @@ module Buildizer
           params[:test_options] = Hash(buildizer.buildizer_conf['test_options'])
           params[:test_env] = buildizer.buildizer_conf['test_env'].to_h
           params[:before_test] = Array(buildizer.buildizer_conf['before_test'])
+          params[:test] = Array(buildizer.buildizer_conf['test'])
         end
       end
 
@@ -96,6 +97,7 @@ module Buildizer
           res[:test_options] = into[:test_options].merge params['test_options'].to_h
           res[:test_env] = into[:test_env].merge(params['test_env'].to_h)
           res[:before_test] = into[:before_test] + Array(params['before_test'])
+          res[:test] = into[:test] + Array(params['test'])
         end
       end
 
@@ -194,7 +196,10 @@ module Buildizer
       end
 
       def test_target(target)
-        return unless target.test_path.exist?
+        unless target.test.any? or buildizer.options[:shell]
+          buildizer.warn "No tests found for target '#{target.name}' (use directive 'test')"
+          return
+        end
 
         target
           .test_env
@@ -205,36 +210,45 @@ module Buildizer
         target.os.install_test_package_instructions(target)
       end
 
+      def prepare_test_container_instructions(target)
+        target.os.prepare_test_container_instructions(target)
+      end
+
       def test_target_env(target, env)
         container_name = SecureRandom.uuid
+        docker_opts = (target.test_options['docker'] || {}).zymbolize_keys
+
         docker.with_container(
           name: container_name,
           image: target.test_image,
           env: env.merge(TERM: ENV['TERM']),
-          privileged: target.test_options['privileged'],
+          docker_opts: docker_opts,
           desc: "Run test container '#{container_name}' " +
                 "target='#{target.name}' env=#{env}"
         ) do |container|
-          prepare_cmd = [*Array(prepare_package_source_instructions(target)),
-                         *Array(install_test_package_instructions(target)),
-                         "cd #{docker.container_package_path}",
-                         *target.before_test]
+          before_test_cmd = [*Array(prepare_package_source_instructions(target)),
+                             *Array(prepare_test_container_instructions(target)),
+                             *Array(install_test_package_instructions(target)),
+                             "cd #{docker.container_package_path}",
+                             *target.before_test]
 
           docker.run_in_container! container: container,
-                                   cmd: prepare_cmd,
-                                   desc: "Run before_test stage in test container '#{container}'",
-                                   docker_opts: {tty: true}
+                                   cmd: before_test_cmd,
+                                   docker_opts: {tty: true},
+                                   desc: "Run before_test stage in test container '#{container}'"
 
           ret = {env: env}
 
           if buildizer.options[:shell]
             docker.shell_in_container container: container
           else
-            #FIXME: test stage
+            test_cmd = ["cd #{docker.container_package_path}", *target.test]
+
             res = docker.run_in_container container: container,
-                                          cmd: "bats --pretty #{target.container_test_path}",
-                                          desc: "Run test stage in test container '#{container}'",
-                                          cmd_opts: {live_log: true, log_failure: false}
+                                          cmd: test_cmd,
+                                          cmd_opts: {live_log: true, log_failure: false},
+                                          docker_opts: {tty: true},
+                                          desc: "Run test stage in test container '#{container}'"
 
             unless res.status.success?
               ret[:error] = :error

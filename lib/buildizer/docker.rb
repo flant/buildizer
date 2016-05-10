@@ -116,11 +116,11 @@ module Buildizer
       Pathname.new('/extra')
     end
 
-    def run_container!(name: nil, image:, env: {}, desc: nil, privileged: nil)
+    def run_container!(name: nil, image:, env: {}, desc: nil, docker_opts: {})
       (name || SecureRandom.uuid).tap do |name|
         builder.buildizer.command! [
           "docker run --detach --name #{name}",
-          *Array(_prepare_command_params(privileged: privileged)),
+          *Array(_prepare_docker_opts(docker_opts)),
           *Array(_prepare_container_params(image, env: env)),
           _wrap_docker_command("while true ; do sleep 1 ; done"),
         ].join(' '), desc: desc
@@ -145,12 +145,11 @@ module Buildizer
       system "docker exec -ti #{container} bash"
     end
 
-    def run_in_container(container:, cmd:, desc: nil, cmd_opts: {}, privileged: nil, docker_opts: {})
+    def run_in_container(container:, cmd:, desc: nil, cmd_opts: {}, docker_opts: {})
       builder.buildizer.command [
         "docker exec",
-        *docker_opts.map {|k, v| "--#{k}=#{v}"},
+        *Array(_prepare_docker_opts(docker_opts)),
         container,
-        *Array(_prepare_command_params(privileged: privileged)),
         _wrap_docker_command(cmd),
       ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
     end
@@ -161,10 +160,10 @@ module Buildizer
       run_in_container(cmd_opts: cmd_opts, **kwargs)
     end
 
-    def run_in_image(image:, cmd:, env: {}, desc: nil, cmd_opts: {}, privileged: nil)
+    def run_in_image(image:, cmd:, env: {}, desc: nil, cmd_opts: {}, docker_opts: {})
       builder.buildizer.command [
         "docker run --rm",
-        *Array(_prepare_command_params(privileged: privileged)),
+        *Array(_prepare_docker_opts(docker_opts)),
         *Array(_prepare_container_params(image, env: env)),
         _wrap_docker_command(cmd),
       ].join(' '), timeout: 24*60*60, desc: desc, **cmd_opts
@@ -186,8 +185,17 @@ module Buildizer
        image.name].compact
     end
 
-    def _prepare_command_params(privileged: nil)
-      (privileged == true) ? "--privileged=true" : nil
+    def _prepare_docker_opts(docker_opts)
+      docker_opts.map do |k, v|
+        next if v.nil?
+
+        to_opt = ->(value) {"--#{k}=#{value}"}
+        if v.is_a? Array
+          v.map(&to_opt)
+        else
+          to_opt[v]
+        end
+      end.flatten.compact
     end
 
     def _wrap_docker_command(cmd)

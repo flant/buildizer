@@ -37,7 +37,12 @@ module Buildizer
 
       def install_test_package_instructions(target)
         "(dpkg -i #{target.builder.docker.container_build_path.join('*.deb')} || true)" +
-          " && apt-get install -qqyf"
+          " && apt-get install -yf"
+      end
+
+      def prepare_test_container_instructions(target)
+        ["apt-get update",
+         "apt-get install -y git"]
       end
 
       def build_deb_instructions(target)

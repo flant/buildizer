@@ -13,7 +13,7 @@ module Buildizer
       def initialize(builder, os,
                      name:, package_name:, package_version:, package_cloud: [],
                      prepare: [], build_dep: [], before_build: [], maintainer: nil,
-                     test_options: {}, test_env: {}, test_image: nil, before_test: [],
+                     test_options: {}, test_env: {}, test_image: nil, before_test: [], test: [],
                      &blk)
         @builder = builder
         @os = os
@@ -31,6 +31,7 @@ module Buildizer
         params[:test_env] = test_env
         params[:test_image] = test_image
         params[:before_test] = before_test
+        params[:test] = test
 
         yield if block_given?
 
@@ -121,18 +122,6 @@ module Buildizer
 
       def container_package_archive_path
         Pathname.new('/').join(container_package_archive_name)
-      end
-
-      def test_dir_name
-        'test'
-      end
-
-      def container_test_path
-        container_package_path.join(test_dir_name)
-      end
-
-      def test_path
-        builder.buildizer.package_path.join(test_dir_name)
       end
 
       def test_env

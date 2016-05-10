@@ -61,6 +61,9 @@ module Buildizer
       def install_test_package_instructions(target)
         raise
       end
+
+      def prepare_test_container_instructions(target)
+      end
     end # Base
   end # Os
 end # Buildizer
