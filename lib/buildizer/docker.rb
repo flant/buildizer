@@ -142,7 +142,7 @@ module Buildizer
     end
 
     def shell_in_container(container:)
-      system "docker exec -ti #{container} bash"
+      system "docker exec -ti #{container} bash -lec 'cd #{container_package_mount_path}; bash'"
     end
 
     def run_in_container(container:, cmd:, desc: nil, cmd_opts: {}, docker_opts: {})
