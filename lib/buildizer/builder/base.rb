@@ -237,7 +237,7 @@ module Buildizer
                                    docker_opts: {tty: true},
                                    desc: "Run before_test stage in test container '#{container}'"
 
-          ret = {env: env}
+          ret = {data: {env: env}}
 
           if buildizer.options[:shell]
             docker.shell_in_container container: container
