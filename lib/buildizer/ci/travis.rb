@@ -66,7 +66,7 @@ module Buildizer
           'rvm' => '2.2.1',
           'install' => install,
           'before_script' => 'buildizer prepare',
-          'script' => 'buildizer build',
+          'script' => 'buildizer build && buildizer test',
           'env' => env,
           'after_success' => 'buildizer deploy',
         )
