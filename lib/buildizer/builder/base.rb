@@ -184,7 +184,7 @@ module Buildizer
 
         if failures.any?
           puts
-          puts "Failures:"
+          puts "Buildizer test FAILED:"
           failures.each do |failure|
             puts "* #{failure[:target].name} env=#{failure[:result][:data][:env]}"
             puts failure[:result][:message]
