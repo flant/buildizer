@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
   spec.files = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.executables = ["buildizer"]
 
-  spec.required_ruby_version = ">= 2.2.1"
+  spec.required_ruby_version = ">= 2.1.0"
 
   spec.add_dependency "thor", ">= 0.19.1", "< 1.0"
   spec.add_dependency "net_status", ">= 0.1.0", "< 1.0"
