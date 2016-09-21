@@ -51,7 +51,7 @@ module Buildizer
           'sudo apt-get update',
 
           # FIXME [https://github.com/docker/docker/issues/20316]:
-          'sudo apt-get -o dpkg::options::="--force-confnew" install -y docker-engine=1.9.1-0~trusty',
+          'sudo apt-get -o dpkg::options::="--force-confnew" install -y --force-yes docker-engine=1.9.1-0~trusty',
 
           'echo "docker-engine hold" | sudo dpkg --set-selections',
         ]
