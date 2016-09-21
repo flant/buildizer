@@ -57,18 +57,25 @@ module Buildizer
         ]
         install.push(*Array(buildizer_install_instructions(master: buildizer.project_settings['master'])))
 
+        if buildizer.project_settings['master']
+          buildizer_bin = 'bundle exec buildizer'
+        else
+          buildizer_bin = 'buildizer'
+        end
+
         env = buildizer.builder.target_names.map {|t| "BUILDIZER_TARGET=#{t}"}
-        conf.merge(
+
+        conf.merge!(
           'dist' => 'trusty',
           'sudo' => 'required',
           'cache' => 'apt',
           'language' => 'ruby',
           'rvm' => '2.2.1',
           'install' => install,
-          'before_script' => 'buildizer prepare',
-          'script' => 'buildizer build && buildizer test',
+          'before_script' => "#{buildizer_bin} prepare",
+          'script' => "#{buildizer_bin} build && #{buildizer_bin} test",
           'env' => env,
-          'after_success' => 'buildizer deploy',
+          'after_success' => "#{buildizer_bin} deploy",
         )
       end
 
