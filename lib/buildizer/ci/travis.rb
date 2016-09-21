@@ -57,7 +57,13 @@ module Buildizer
         ]
         install.push(*Array(buildizer_install_instructions(master: buildizer.project_settings['master'])))
 
-        env = buildizer.builder.target_names.map {|t| "BUILDIZER_TARGET=#{t}"}
+        env = buildizer.builder.target_names.map do |t|
+          "".tap do |env_str|
+            env_str.concat(master_env) if buildizer.project_settings['master']
+            env_str.concat " BUILDIZER_TARGET=#{t}"
+          end
+        end
+
         conf.merge(
           'dist' => 'trusty',
           'sudo' => 'required',

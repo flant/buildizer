@@ -46,11 +46,15 @@ module Buildizer
         raise
       end
 
+      def master_env
+        "BUNDLE_GEMFILE=~/buildizer/Gemfile"
+      end
+
       def buildizer_install_instructions(master: nil)
         if master
           ['git clone https://github.com/flant/buildizer ~/buildizer',
-           'echo "export BUNDLE_GEMFILE=~/buildizer/Gemfile" | tee -a ~/.bashrc',
-           'export BUNDLE_GEMFILE=~/buildizer/Gemfile',
+           "echo 'export #{master_env}' | tee -a ~/.bashrc",
+           "export #{master_env}",
            'gem install bundler',
            'gem install overcommit',
            'bundle install',
